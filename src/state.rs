@@ -48,8 +48,6 @@ impl BitBoard {
     }
 }
 
-
-
 pub fn algebraic_to_offset( square: &str ) -> u8 {
     if square.chars().count() != 2 {
         panic!( "Algebraic address \"{}\", does not have a size of 2!", square );
