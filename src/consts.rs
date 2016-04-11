@@ -6,14 +6,14 @@ pub const WHITE: u8 = 0;
 pub const BLACK: u8 = COLOR;
 
 // Piece types ( including EMPTY and ALL )
-pub const EMPTY: u8  = !0;
-pub const PAWN: u8   = 0;
+pub const EMPTY: u8 = !0;
+pub const PAWN: u8 = 0;
 pub const KNIGHT: u8 = 1 << 1;
 pub const BISHOP: u8 = 2 << 1;
-pub const ROOK: u8   = 3 << 1;
-pub const QUEEN: u8  = 4 << 1;
-pub const KING: u8   = 5 << 1;
-pub const ALL: u8    = 6 << 1;
+pub const ROOK: u8 = 3 << 1;
+pub const QUEEN: u8 = 4 << 1;
+pub const KING: u8 = 5 << 1;
+pub const ALL: u8 = 6 << 1;
 
 // Castling types
 pub const WK_CASTLE: u8 = 1;

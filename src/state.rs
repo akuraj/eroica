@@ -49,28 +49,19 @@ impl BitBoard {
 }
 
 pub fn algebraic_to_offset( square: &str ) -> u8 {
-    if square.chars().count() != 2 {
-        panic!( "Algebraic address \"{}\", does not have a size of 2!", square );
-    }
-
+    assert!( square.chars().count() == 2, "Invalid algebraic address \"{}\"", square );
     let mut char_iter = square.chars().enumerate();
     let mut offset: u8 = 0;
 
     while let Some( ( i, c ) ) = char_iter.next() {
         match i {
             0 => {
-                if !( 'a' <= c && c <= 'h' ) {
-                    panic!( "Invalid file: {}", c );
-                }
-
+                assert!( 'a' <= c && c <= 'h', "Invalid file: {}", c );
                 offset += c as u8 - 'a' as u8;
             },
             1 => {
                 if let Some( rank_number ) = c.to_digit( 10 ) {
-                    if !( 1 <= rank_number && rank_number <= 8 ) {
-                        panic!( "Invalid file: {}", c );
-                    }
-
+                    assert!( 1 <= rank_number && rank_number <= 8, "Invalid rank: {}", c );
                     offset += ( rank_number as u8 - 1 ) * 8;
                 }
                 else
@@ -91,11 +82,11 @@ pub struct State {
     pub bit_board: BitBoard,
     pub to_move: u8,
     pub castling: u8,
-    pub en_passant: u64, // FIXME: Maybe imlement a logic which can handle a u8?
+    pub en_passant: u8, // Store the file index
     pub halfmove_clock: u8,
+    pub fullmove_count: u8,
 
     // repetition table
-
     // hash
     // other bb items
 }
@@ -106,19 +97,17 @@ impl Default for State {
                 bit_board: BitBoard( [ 0u64; 14 ] ),
                 to_move: 0,
                 castling: 0,
-                en_passant: 0,
-                halfmove_clock: 0, }
+                en_passant: EMPTY,
+                halfmove_clock: 0,
+                fullmove_count: 0, }
     }
 }
 
 impl State {
     pub fn generate_state_from_fen( fen: &str ) -> Self {
         // Check that fen specifies the required number of fields
-        // NOTE: We DON'T check for legality of the position
-        match fen.split_whitespace().count() {
-            5 | 6 => {},
-            _ => panic!( "\nFEN must specify exactly 5 or 6 fields ( if fullmove_count is also included ):\n{}", fen ),
-        }
+        let num_fields = fen.split_whitespace().count();
+        assert!( num_fields == 5 || num_fields == 6, "FEN must specify exactly 5 or 6 fields ( if fullmove_count is also included ):\n{}", fen );
 
         let mut iter = fen.split_whitespace().enumerate();
         let mut state = State{ ..Default::default() };
@@ -129,18 +118,12 @@ impl State {
                     // position
 
                     // Populate simple_board
-                    if section.rsplit( '/' ).count() != 8 {
-                        panic!( "\nPosition should contain 8 rows:\n{}", section );
-                    }
-
+                    assert!( section.rsplit( '/' ).count() == 8, "Position should contain 8 rows:\n{}", section );
                     let mut row_iter = section.rsplit( '/' ).enumerate();
                     let mut position_offset: usize = 0;
 
                     while let Some( ( row_number, row ) ) = row_iter.next() {
-                        if position_offset != 8 * row_number {
-                            panic!( "\nInvalid position_offset: {}, at row_number: {}", position_offset, row_number );
-                        }
-
+                        assert!( position_offset == 8 * row_number, "Invalid position_offset: {}, at row_number: {}", position_offset, row_number );
                         let mut char_iter = row.chars();
 
                         while let Some( c ) = char_iter.next() {
@@ -202,8 +185,8 @@ impl State {
                 3 => {
                     // en_passant
                     state.en_passant = match section {
-                        "-" => 0,
-                         _  => 1 << algebraic_to_offset( section ),
+                        "-" => EMPTY,
+                         _  => algebraic_to_offset( section ) % 8,
                     }
                 },
                 4 => {
@@ -213,9 +196,18 @@ impl State {
                          _  => section.parse::<u8>().unwrap(),
                     }
                 },
+                5 => {
+                    // fullmove_count
+                    state.fullmove_count = match section {
+                        "-" => 0,
+                         _  => section.parse::<u8>().unwrap(),
+                    }
+                },
                 _ => {},
             }
         }
+
+        // FIXME: Implement a state check
 
         state
     }
