@@ -23,3 +23,9 @@ pub const BQ_CASTLE: u8 = WQ_CASTLE << BLACK;
 
 pub const W_CASTLE: u8 = WK_CASTLE | WQ_CASTLE;
 pub const B_CASTLE: u8 = BK_CASTLE | BQ_CASTLE;
+
+// BitBoard Constants
+pub const FIRST_ROW: u64 = 255u64;
+pub const A_FILE: u64 = 72340172838076673u64;
+pub const EDGES: u64 = 18411139144890810879u64;
+pub const NOT_EDGES: u64 = 35604928818740736u64;
