@@ -212,3 +212,42 @@ impl State {
         state
     }
 }
+
+// A simple fn to print a BitBoard
+pub fn print_bb( bb: &u64 ) {
+    let top = " ___ ___ ___ ___ ___ ___ ___ ___ \n";
+    let start  = "|   |   |   |   |   |   |   |   |\n";
+    let end  = "\n|___|___|___|___|___|___|___|___|\n";
+
+    let mut output = String::new();
+    let mut row: u64 = FIRST_ROW << 56;
+    let mut read: u64;
+
+    output.push_str( top );
+
+    for j in 0..8 {
+        output.push_str( start );
+        output.push( '|' );
+        read = ( bb & row ) >> ( 56 - 8 * j );
+
+        for i in 0..8 {
+            if read & ( 1 << i ) != 0 {
+                output.push_str( " x |" );
+            }
+            else {
+                output.push_str( "   |" );
+            }
+        }
+
+        output.push_str( end );
+        row >>= 8;
+    }
+
+    println!( "{}", output );
+}
+
+// ( row, file )
+pub fn row_file( bb: &u64 ) -> ( u32, u32 ) {
+    let i = bb.trailing_zeros();
+    ( i % 8, i / 8 )
+}
