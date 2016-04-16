@@ -63,9 +63,7 @@ pub fn algebraic_to_offset( square: &str ) -> u8 {
                 if let Some( rank_number ) = c.to_digit( 10 ) {
                     assert!( 1 <= rank_number && rank_number <= 8, "Invalid rank: {}", c );
                     offset += ( rank_number as u8 - 1 ) * 8;
-                }
-                else
-                {
+                } else {
                     panic!( "Invalid rank: {}", c );
                 }
             },
@@ -129,9 +127,7 @@ impl State {
                         while let Some( c ) = char_iter.next() {
                             if let Some( empty_space ) = c.to_digit( 10 ) {
                                 position_offset += empty_space as usize;
-                            }
-                            else
-                            {
+                            } else {
                                 state.simple_board[ position_offset ] = match c {
                                     'P' => WHITE | PAWN,
                                     'N' => WHITE | KNIGHT,
@@ -220,7 +216,7 @@ pub fn print_bb( bb: &u64 ) {
     let end  = "\n|___|___|___|___|___|___|___|___|\n";
 
     let mut output = String::new();
-    let mut row: u64 = FIRST_ROW << 56;
+    let mut row: u64 = FIRST_RANK << 56;
     let mut read: u64;
 
     output.push_str( top );
@@ -233,8 +229,7 @@ pub fn print_bb( bb: &u64 ) {
         for i in 0..8 {
             if read & ( 1 << i ) != 0 {
                 output.push_str( " x |" );
-            }
-            else {
+            } else {
                 output.push_str( "   |" );
             }
         }
@@ -246,8 +241,35 @@ pub fn print_bb( bb: &u64 ) {
     println!( "{}", output );
 }
 
-// ( file, row )
-pub fn file_row( bb: &u64 ) -> ( u32, u32 ) {
-    let i = bb.trailing_zeros();
-    ( i % 8, i / 8 )
+// ( file, rank )
+pub fn file_rank( pos: u32 ) -> ( u32, u32 ) {
+    ( pos % 8, pos / 8 )
+}
+
+// Rook and Bishop Masks
+pub fn rook_mask( pos: u32 ) -> u64 {
+    let ( i, j ) = file_rank( pos );
+    ( A_FILE_NE << i ) ^ ( FIRST_RANK_NE << ( 8 * j ) )
+}
+
+pub fn bishop_mask( pos: u32 ) -> u64 {
+    let ( i, j ) = file_rank( pos );
+    let s = i + j;
+    let mut bishop_mask: u64;
+
+    if i > j {
+        bishop_mask = ( A1_H8 << ( i - j ) ) & LRT;
+    }
+    else {
+        bishop_mask = ( A1_H8 >> ( j - i ) ) & ULT;
+    }
+
+    if s > 7 {
+        bishop_mask ^= A8_H1 << ( 8 * s - 56 );
+    }
+    else {
+        bishop_mask ^= A8_H1 >> ( 56 - 8 * s );
+    }
+
+    bishop_mask & NOT_EDGES
 }
