@@ -246,8 +246,8 @@ pub fn print_bb( bb: &u64 ) {
     println!( "{}", output );
 }
 
-// ( row, file )
-pub fn row_file( bb: &u64 ) -> ( u32, u32 ) {
+// ( file, row )
+pub fn file_row( bb: &u64 ) -> ( u32, u32 ) {
     let i = bb.trailing_zeros();
     ( i % 8, i / 8 )
 }
