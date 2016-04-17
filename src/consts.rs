@@ -33,5 +33,7 @@ pub const A1_H8: u64 = 0x8040201008040201u64;
 pub const A8_H1: u64 = 0x0102040810204080u64;
 pub const LRT: u64 = 0x0080C0E0F0F8FCFE; // i > j
 pub const ULT: u64 = !LRT; // i <= j // includes A1_H8
+pub const URT: u64 = 0xFEFCF8F0E0C08000u64; // i + j > 7
+pub const LLT: u64 = !URT; // i + j <= 7 // includes A8_H1
 pub const EDGES: u64 = 0xFF818181818181FFu64;
 pub const NOT_EDGES: u64 = !EDGES;
