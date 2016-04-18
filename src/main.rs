@@ -24,16 +24,33 @@
 cargo rustc --release -- -C target-feature=+popcnt -C target-cpu=native
 */
 
+extern crate rand;
+
 pub mod consts;
 pub mod state;
+pub mod utils;
+pub mod magics;
 
 use consts::*;
 use state::*;
+use magics::*;
+use utils::*;
 
 fn main() {
+    let mut rook_magics: [ u64; 64 ] = [ 0u64; 64 ];
+    let mut bishop_magics: [ u64; 64 ] = [ 0u64; 64 ];
+
+    for i in 0..64 {
+        rook_magics[ i ] = magic( i as u32, ROOK );
+    }
+
+    for i in 0..64 {
+        bishop_magics[ i ] = magic( i as u32, BISHOP );
+    }
+
+    /*
     let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
-
     let state = State::generate_state_from_fen( fen );
-
     println!( "{}", state.bit_board[ 0 ] );
+    */
 }
