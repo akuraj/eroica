@@ -53,13 +53,13 @@ pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
     let shift: u8 = 64 - num_bits;
 
     let hash_size = 1 << num_bits;
-    let mut blocks: [ u64; 4096 ] = [ 0u64; 4096 ];
+    let mut occupancies: [ u64; 4096 ] = [ 0u64; 4096 ];
     let mut attacks: [ u64; 4096 ] = [ 0u64; 4096 ];
 
-    // Compute blocks and attacks
+    // Compute occupancies and attacks
     for i in 0..hash_size {
-        blocks[ i ] = expand_onto_mask( i, num_bits, mask );
-        attacks[ i ] = attack( pos, blocks[ i ] );
+        occupancies[ i ] = expand_onto_mask( i, num_bits, mask );
+        attacks[ i ] = attack( pos, occupancies[ i ] );
     }
 
     // Trial and error to find the magic
@@ -81,7 +81,7 @@ pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
         failed = false;
 
         for i in 0..hash_size {
-            hash = magic_hash( guess, blocks[ i ], shift );
+            hash = magic_hash( guess, occupancies[ i ], shift );
             if used[ hash ] == 0u64 {
                 used[ hash ] = attacks[ i ];
             } else if used[ hash ] != attacks[ i ] {
