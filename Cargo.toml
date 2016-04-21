@@ -5,3 +5,4 @@ authors = [ "Jayakiran Akurathi <Jayakiran.Akurathi@gmail.com>" ]
 
 [dependencies]
 rand = "*"
+time = "*"

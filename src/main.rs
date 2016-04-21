@@ -25,6 +25,7 @@ cargo rustc --release -- -C target-feature=+popcnt -C target-cpu=native
 */
 
 extern crate rand;
+extern crate time;
 
 pub mod consts;
 pub mod state;
@@ -35,8 +36,11 @@ use consts::*;
 use state::*;
 use magics::*;
 use utils::*;
+use time::*;
 
 fn main() {
+    let t1 = precise_time_ns();
+
     let mut rook_magics: [ u64; 64 ] = [ 0u64; 64 ];
     let mut bishop_magics: [ u64; 64 ] = [ 0u64; 64 ];
 
@@ -47,6 +51,10 @@ fn main() {
     for i in 0..64 {
         bishop_magics[ i ] = magic( i as u32, BISHOP, true );
     }
+
+    let t2 = precise_time_ns();
+
+    println!( "\n\nTime taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 
     /*
     let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";

@@ -69,30 +69,22 @@ pub fn bishop_mask( pos: u32 ) -> u64 {
     bishop_mask & NOT_EDGES
 }
 
-pub fn pop_first( x: &mut u64 ) -> u32 {
-    let probe = x.trailing_zeros();
-    *x ^= 1 << probe;
-    probe
-}
+pub fn occupancies( mask: u64 ) -> Vec<u64> {
+    // Carry-Rippler implementation
+    let mut occupancy: u64 = 0;
+    let mut occupancies: Vec<u64> = Vec::new();
 
-// Compute block by expanding onto mask
-pub fn expand_onto_mask( index: usize, n: u8, mask: u64 ) -> u64 {
-    let mut block = mask;
-    let mut temp = mask;
-    let mut probe: u32;
-
-    for i in 0..n {
-        probe = pop_first( &mut temp );
-        if ( index & ( 1 << i ) ) == 0 {
-            block ^= 1 << probe;
-        }
+    loop {
+        occupancies.push( occupancy );
+        occupancy = occupancy.wrapping_sub( mask ) & mask;
+        if occupancy == 0 { break; }
     }
 
-    block
+    occupancies
 }
 
 // Rook and Bishop attacks
-pub fn rook_attack( pos: u32, block: u64 ) -> u64 {
+pub fn rook_attack( pos: u32, occupancy: u64 ) -> u64 {
     let ( i, j ) = file_rank( pos );
 
     let mut file_iter: u32;
@@ -105,7 +97,7 @@ pub fn rook_attack( pos: u32, block: u64 ) -> u64 {
     rank_iter = j;
     pos_iter = pos;
     loop {
-        if rank_iter == 7 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if rank_iter == 7 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         rank_iter += 1;
         pos_iter += 8;
@@ -116,7 +108,7 @@ pub fn rook_attack( pos: u32, block: u64 ) -> u64 {
     file_iter = i;
     pos_iter = pos;
     loop {
-        if file_iter == 7 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if file_iter == 7 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         file_iter += 1;
         pos_iter += 1;
@@ -127,7 +119,7 @@ pub fn rook_attack( pos: u32, block: u64 ) -> u64 {
     rank_iter = j;
     pos_iter = pos;
     loop {
-        if rank_iter == 0 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if rank_iter == 0 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         rank_iter -= 1;
         pos_iter -= 8;
@@ -138,7 +130,7 @@ pub fn rook_attack( pos: u32, block: u64 ) -> u64 {
     file_iter = i;
     pos_iter = pos;
     loop {
-        if file_iter == 0 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if file_iter == 0 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         file_iter -= 1;
         pos_iter -= 1;
@@ -148,7 +140,7 @@ pub fn rook_attack( pos: u32, block: u64 ) -> u64 {
     attack
 }
 
-pub fn bishop_attack( pos: u32, block: u64 ) -> u64 {
+pub fn bishop_attack( pos: u32, occupancy: u64 ) -> u64 {
     let ( i, j ) = file_rank( pos );
 
     let mut file_iter: u32;
@@ -162,7 +154,7 @@ pub fn bishop_attack( pos: u32, block: u64 ) -> u64 {
     rank_iter = j;
     pos_iter = pos;
     loop {
-        if file_iter == 7 || rank_iter == 7 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if file_iter == 7 || rank_iter == 7 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         file_iter += 1;
         rank_iter += 1;
@@ -175,7 +167,7 @@ pub fn bishop_attack( pos: u32, block: u64 ) -> u64 {
     rank_iter = j;
     pos_iter = pos;
     loop {
-        if file_iter == 7 || rank_iter == 0 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if file_iter == 7 || rank_iter == 0 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         file_iter += 1;
         rank_iter -= 1;
@@ -188,7 +180,7 @@ pub fn bishop_attack( pos: u32, block: u64 ) -> u64 {
     rank_iter = j;
     pos_iter = pos;
     loop {
-        if file_iter == 0 || rank_iter == 0 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if file_iter == 0 || rank_iter == 0 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         file_iter -= 1;
         rank_iter -= 1;
@@ -201,7 +193,7 @@ pub fn bishop_attack( pos: u32, block: u64 ) -> u64 {
     rank_iter = j;
     pos_iter = pos;
     loop {
-        if file_iter == 0 || rank_iter == 7 || ( block & ( 1 << pos_iter ) ) != 0 { break; }
+        if file_iter == 0 || rank_iter == 7 || ( occupancy & ( 1 << pos_iter ) ) != 0 { break; }
 
         file_iter -= 1;
         rank_iter += 1;

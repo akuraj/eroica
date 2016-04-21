@@ -24,8 +24,24 @@ pub const BISHOP_BITS: [ u8; 64 ] = [ 6, 5, 5, 5, 5, 5, 5, 6,
                                       5, 5, 5, 5, 5, 5, 5, 5,
                                       6, 5, 5, 5, 5, 5, 5, 6 ];
 
-pub fn magic_hash( magic: u64, mask: u64, shift: u8 ) -> usize {
-    ( magic.wrapping_mul( mask ) >> shift ) as usize
+pub fn magic_hash( magic: u64, occupancy: u64, shift: u8 ) -> usize {
+    ( magic.wrapping_mul( occupancy ) >> shift ) as usize
+}
+
+pub fn is_magic( guess: u64, occupancies: &[ u64 ], attacks: &[ u64 ], shift: u8 ) -> bool {
+    let mut used: Vec<u64> = vec![ 0u64; occupancies.len() ];
+    let mut hash: usize;
+
+    for ( i, occupancy ) in occupancies.iter().enumerate() {
+        hash = magic_hash( guess, *occupancy, shift );
+        if used[ hash ] == 0u64 {
+            used[ hash ] = attacks[ i ];
+        } else if used[ hash ] != attacks[ i ] {
+            return false;
+        }
+    }
+
+    true
 }
 
 pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
@@ -52,45 +68,24 @@ pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
     assert!( num_bits == ( mask.count_ones() as u8 ) );
     let shift: u8 = 64 - num_bits;
 
-    let hash_size = 1 << num_bits;
-    let mut occupancies: [ u64; 4096 ] = [ 0u64; 4096 ];
-    let mut attacks: [ u64; 4096 ] = [ 0u64; 4096 ];
-
     // Compute occupancies and attacks
-    for i in 0..hash_size {
-        occupancies[ i ] = expand_onto_mask( i, num_bits, mask );
-        attacks[ i ] = attack( pos, occupancies[ i ] );
-    }
+    let occupancies = occupancies( mask );
+    let attacks: Vec<u64> = occupancies.iter().map( |x| attack( pos, *x ) ).collect();
 
     // Trial and error to find the magic
-    let mut guess: u64;
-    let mut used: [ u64; 4096 ];
-    let mut hash: usize;
-    let mut failed: bool;
     let mut rng = thread_rng();
+    let mut guess: u64;
     let mut tries = 0;
 
     'main: loop {
         'guess: loop {
-            guess = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
+            guess = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>(); // num_bits: Mean = 8, StdDev = 2.65
             if magic_hash( guess, mask, 56 ).count_ones() >= 6 { break 'guess; }
         }
 
         tries += 1;
-        used = [ 0u64; 4096 ];
-        failed = false;
 
-        for i in 0..hash_size {
-            hash = magic_hash( guess, occupancies[ i ], shift );
-            if used[ hash ] == 0u64 {
-                used[ hash ] = attacks[ i ];
-            } else if used[ hash ] != attacks[ i ] {
-                failed = true;
-                break;
-            }
-        }
-
-        if !failed {
+        if is_magic( guess, &occupancies, &attacks, shift ) {
             if verbose {
                 println!( "pos: {}, piece: {}, tries: {}\nmagic: {}", pos, if piece == ROOK { "Rook" } else { "Bishop" }, tries, guess );
             }
