@@ -5,6 +5,7 @@ use utils::*;
 use rand::{ Rng, thread_rng };
 
 // Hash size in bits for each square - separate for Rooks and Bishops
+// Equal to the number of bits set in the mask
 pub const ROOK_BITS: [ u8; 64 ] = [ 12, 11, 11, 11, 11, 11, 11, 12,
                                     11, 10, 10, 10, 10, 10, 10, 11,
                                     11, 10, 10, 10, 10, 10, 10, 11,
@@ -23,7 +24,11 @@ pub const BISHOP_BITS: [ u8; 64 ] = [ 6, 5, 5, 5, 5, 5, 5, 6,
                                       5, 5, 5, 5, 5, 5, 5, 5,
                                       6, 5, 5, 5, 5, 5, 5, 6 ];
 
-pub fn magic( pos: u32, piece: u8 ) -> u64 {
+pub fn magic_hash( magic: u64, mask: u64, shift: u8 ) -> usize {
+    ( magic.wrapping_mul( mask ) >> shift ) as usize
+}
+
+pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
     assert!( pos < 64, "Square address out of bounds!" );
 
     let mask = match piece {
@@ -63,33 +68,34 @@ pub fn magic( pos: u32, piece: u8 ) -> u64 {
     let mut hash: usize;
     let mut failed: bool;
     let mut rng = thread_rng();
-    println!( "{}", mask );
-    for try in 0..100000000 {
-        loop {
+    let mut tries = 0;
+
+    'main: loop {
+        'guess: loop {
             guess = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
-            if ( ( guess.wrapping_mul( mask ) ) >> 56 ).count_ones() >= 6 { break; }
+            if magic_hash( guess, mask, 56 ).count_ones() >= 6 { break 'guess; }
         }
 
+        tries += 1;
         used = [ 0u64; 4096 ];
         failed = false;
 
         for i in 0..hash_size {
-            hash = ( ( guess.wrapping_mul( blocks[ i ] ) ) >> shift ) as usize;
+            hash = magic_hash( guess, blocks[ i ], shift );
             if used[ hash ] == 0u64 {
                 used[ hash ] = attacks[ i ];
-            }
-
-            if used[ hash ] != attacks[ i ] {
+            } else if used[ hash ] != attacks[ i ] {
                 failed = true;
                 break;
             }
         }
 
         if !failed {
-            println!( "pos: {}, piece: {}, try: {}\nmagic: {}", pos, if piece == ROOK { "Rook" } else { "Bishop" }, try, guess );
+            if verbose {
+                println!( "pos: {}, piece: {}, tries: {}\nmagic: {}", pos, if piece == ROOK { "Rook" } else { "Bishop" }, tries, guess );
+            }
+
             return guess;
         }
     }
-
-    panic!( "Failed to find magic for:\npos: {}, piece: {}", pos, if piece == ROOK { "Rook" } else { "Bishop" } );
 }

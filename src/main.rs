@@ -41,11 +41,11 @@ fn main() {
     let mut bishop_magics: [ u64; 64 ] = [ 0u64; 64 ];
 
     for i in 0..64 {
-        rook_magics[ i ] = magic( i as u32, ROOK );
+        rook_magics[ i ] = magic( i as u32, ROOK, true );
     }
 
     for i in 0..64 {
-        bishop_magics[ i ] = magic( i as u32, BISHOP );
+        bishop_magics[ i ] = magic( i as u32, BISHOP, true );
     }
 
     /*
