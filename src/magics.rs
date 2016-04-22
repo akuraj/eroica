@@ -23,6 +23,7 @@ pub const BISHOP_SHIFTS: [ u8; 64 ] = [ 58, 59, 59, 59, 59, 59, 59, 58,
                                         59, 59, 59, 59, 59, 59, 59, 59,
                                         58, 59, 59, 59, 59, 59, 59, 58 ];
 
+// Stored magics
 pub const ROOK_MAGICS: [ u64; 64 ] = [ 36028970966466560u64, 18084767790534656u64, 5944786692669964672u64, 324267969331855490u64, 9871894850096333568u64, 4827867648174981376u64, 432369754624426120u64, 4683752548150083586u64,
                                        18155137071587456u64, 1153695629585678400u64, 4644887139983360u64, 72198881550534656u64, 4611826790283871232u64, 2432506765946914832u64, 9228438621133078529u64, 2594355050402940160u64,
                                        4670385095945764880u64, 4620693493633789952u64, 4755838590175543368u64, 38879830821048321u64, 144258674410457088u64, 1126449729896576u64, 9799837187775203472u64, 4629702615964582017u64,
@@ -62,27 +63,9 @@ pub fn is_magic( guess: u64, occupancies: &[ u64 ], attacks: &[ u64 ], shift: u8
 }
 
 pub fn check_stored_magics( piece: u8 ) {
-    let mask_fn: fn( u32 ) -> u64 = match piece {
-        ROOK => rook_mask,
-        BISHOP => bishop_mask,
-        _ => panic!( "Invalid piece!" ),
-    };
-
-    let shifts = match piece {
-        ROOK => ROOK_SHIFTS,
-        BISHOP => BISHOP_SHIFTS,
-        _ => panic!( "Invalid piece!" ),
-    };
-
-    let attack: fn( u32, u64 ) -> u64 = match piece {
-        ROOK => rook_attack,
-        BISHOP => bishop_attack,
-        _ => panic!( "Invalid piece!" ),
-    };
-
-    let magics = match piece {
-        ROOK => ROOK_MAGICS,
-        BISHOP => BISHOP_MAGICS,
+    let ( mask_fn, shifts, attack, magics ): ( fn( u32 ) -> u64, [ u8; 64 ], fn( u32, u64 ) -> u64, [ u64; 64 ] ) = match piece {
+        ROOK => ( rook_mask, ROOK_SHIFTS, rook_attack, ROOK_MAGICS ),
+        BISHOP => ( bishop_mask, BISHOP_SHIFTS, bishop_attack, BISHOP_MAGICS ),
         _ => panic!( "Invalid piece!" ),
     };
 
@@ -97,9 +80,7 @@ pub fn check_stored_magics( piece: u8 ) {
         let occupancies = occupancies( mask );
         let attacks: Vec<u64> = occupancies.iter().map( |x| attack( pos, *x ) ).collect();
 
-        let magic = magics[ i ];
-
-        if !is_magic( magic, &occupancies, &attacks, shift ) {
+        if !is_magic( magics[ i ], &occupancies, &attacks, shift ) {
             panic!( "Magic is not magical!\nPiece: {}, Pos: {}", if piece == ROOK { "Rook" } else { "Bishop" }, pos );
         }
     }
@@ -108,21 +89,9 @@ pub fn check_stored_magics( piece: u8 ) {
 pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
     assert!( pos < 64, "Square address out of bounds!" );
 
-    let mask = match piece {
-        ROOK => rook_mask( pos ),
-        BISHOP => bishop_mask( pos ),
-        _ => panic!( "Invalid piece!" ),
-    };
-
-    let shift = match piece {
-        ROOK => ROOK_SHIFTS[ pos as usize ],
-        BISHOP => BISHOP_SHIFTS[ pos as usize ],
-        _ => panic!( "Invalid piece!" ),
-    };
-
-    let attack: fn( u32, u64 ) -> u64 = match piece {
-        ROOK => rook_attack,
-        BISHOP => bishop_attack,
+    let ( mask, shift, attack ): ( u64, u8, fn( u32, u64 ) -> u64 ) = match piece {
+        ROOK => ( rook_mask( pos ), ROOK_SHIFTS[ pos as usize ], rook_attack ),
+        BISHOP => ( bishop_mask( pos ), BISHOP_SHIFTS[ pos as usize ], bishop_attack ),
         _ => panic!( "Invalid piece!" ),
     };
 
