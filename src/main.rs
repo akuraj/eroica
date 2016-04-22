@@ -45,7 +45,7 @@ fn main() {
     check_stored_magics( BISHOP );
     let t2 = precise_time_ns();
     println!( "\n\nTime taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
-    
+
     /*
     let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
     let state = State::generate_state_from_fen( fen );

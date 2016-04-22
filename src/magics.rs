@@ -4,25 +4,24 @@ use consts::*;
 use utils::*;
 use rand::{ Rng, thread_rng };
 
-// Hash size in bits for each square - separate for Rooks and Bishops
-// Equal to the number of bits set in the mask
-pub const ROOK_BITS: [ u8; 64 ] = [ 12, 11, 11, 11, 11, 11, 11, 12,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    12, 11, 11, 11, 11, 11, 11, 12 ];
+// shift = 64 - hash_num_bits, where hash_num_bits = number of bits set in the mask
+pub const ROOK_SHIFTS: [ u8; 64 ] = [ 52, 53, 53, 53, 53, 53, 53, 52,
+                                      53, 54, 54, 54, 54, 54, 54, 53,
+                                      53, 54, 54, 54, 54, 54, 54, 53,
+                                      53, 54, 54, 54, 54, 54, 54, 53,
+                                      53, 54, 54, 54, 54, 54, 54, 53,
+                                      53, 54, 54, 54, 54, 54, 54, 53,
+                                      53, 54, 54, 54, 54, 54, 54, 53,
+                                      52, 53, 53, 53, 53, 53, 53, 52 ];
 
-pub const BISHOP_BITS: [ u8; 64 ] = [ 6, 5, 5, 5, 5, 5, 5, 6,
-                                      5, 5, 5, 5, 5, 5, 5, 5,
-                                      5, 5, 7, 7, 7, 7, 5, 5,
-                                      5, 5, 7, 9, 9, 7, 5, 5,
-                                      5, 5, 7, 9, 9, 7, 5, 5,
-                                      5, 5, 7, 7, 7, 7, 5, 5,
-                                      5, 5, 5, 5, 5, 5, 5, 5,
-                                      6, 5, 5, 5, 5, 5, 5, 6 ];
+pub const BISHOP_SHIFTS: [ u8; 64 ] = [ 58, 59, 59, 59, 59, 59, 59, 58,
+                                        59, 59, 59, 59, 59, 59, 59, 59,
+                                        59, 59, 57, 57, 57, 57, 59, 59,
+                                        59, 59, 57, 55, 55, 57, 59, 59,
+                                        59, 59, 57, 55, 55, 57, 59, 59,
+                                        59, 59, 57, 57, 57, 57, 59, 59,
+                                        59, 59, 59, 59, 59, 59, 59, 59,
+                                        58, 59, 59, 59, 59, 59, 59, 58 ];
 
 pub const ROOK_MAGICS: [ u64; 64 ] = [ 36028970966466560u64, 18084767790534656u64, 5944786692669964672u64, 324267969331855490u64, 9871894850096333568u64, 4827867648174981376u64, 432369754624426120u64, 4683752548150083586u64,
                                        18155137071587456u64, 1153695629585678400u64, 4644887139983360u64, 72198881550534656u64, 4611826790283871232u64, 2432506765946914832u64, 9228438621133078529u64, 2594355050402940160u64,
@@ -69,9 +68,9 @@ pub fn check_stored_magics( piece: u8 ) {
         _ => panic!( "Invalid piece!" ),
     };
 
-    let bits = match piece {
-        ROOK => ROOK_BITS,
-        BISHOP => BISHOP_BITS,
+    let shifts = match piece {
+        ROOK => ROOK_SHIFTS,
+        BISHOP => BISHOP_SHIFTS,
         _ => panic!( "Invalid piece!" ),
     };
 
@@ -90,10 +89,9 @@ pub fn check_stored_magics( piece: u8 ) {
     for i in 0..64 {
         let pos: u32 = i as u32;
         let mask = mask_fn( pos );
-        let num_bits = bits[ i ];
+        let shift = shifts[ i ];
 
-        assert!( num_bits == ( mask.count_ones() as u8 ) );
-        let shift: u8 = 64 - num_bits;
+        assert!( ( 64 - shift ) == ( mask.count_ones() as u8 ) );
 
         // Compute occupancies and attacks
         let occupancies = occupancies( mask );
@@ -116,9 +114,9 @@ pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
         _ => panic!( "Invalid piece!" ),
     };
 
-    let num_bits = match piece {
-        ROOK => ROOK_BITS[ pos as usize ],
-        BISHOP => BISHOP_BITS[ pos as usize ],
+    let shift = match piece {
+        ROOK => ROOK_SHIFTS[ pos as usize ],
+        BISHOP => BISHOP_SHIFTS[ pos as usize ],
         _ => panic!( "Invalid piece!" ),
     };
 
@@ -128,8 +126,7 @@ pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
         _ => panic!( "Invalid piece!" ),
     };
 
-    assert!( num_bits == ( mask.count_ones() as u8 ) );
-    let shift: u8 = 64 - num_bits;
+    assert!( ( 64 - shift ) == ( mask.count_ones() as u8 ) );
 
     // Compute occupancies and attacks
     let occupancies = occupancies( mask );
