@@ -47,7 +47,7 @@ fn main() {
 
     let t2 = precise_time_ns();
     println!( "\n\nTime taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
-    
+
     /*
     let t1 = precise_time_ns();
     //check_stored_magics( ROOK );

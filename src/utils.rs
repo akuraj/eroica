@@ -245,8 +245,7 @@ pub fn king_attack( pos: u32 ) -> u64 {
     ( 1u64 << pos ) ^ influence( pos, 1 )
 }
 
-// Capture, as opposed to moving forward
-pub fn pawn_attack( pos: u32, color: u8 ) -> u64 {
+pub fn pawn_capture( pos: u32, color: u8 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
