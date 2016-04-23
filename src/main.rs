@@ -40,7 +40,7 @@ use time::*;
 
 fn main() {
 
-    let x = knight_attack( 27 );
+    let x = king_attack( 27 );
     print_bb( &x );
 
     /*

@@ -2,6 +2,7 @@
 
 use consts::*;
 use std::u64::MAX;
+use std::cmp;
 
 // A simple fn to print a BitBoard
 pub fn print_bb( bb: &u64 ) {
@@ -206,24 +207,25 @@ pub fn bishop_attack( pos: u32, occupancy: u64 ) -> u64 {
 }
 
 // Returns the rectangle of influence
-pub fn knight_influence( pos: u32 ) -> u64 {
+pub fn influence( pos: u32, size: u32 ) -> u64 {
     let ( i, j ) = file_rank( pos );
 
-    let influence_rank: u64 = match ( j < 5, j > 2 ) {
-        ( true, true ) => ( MAX >> ( 40 - 8 * j ) ) & ( MAX << ( 8 * j - 16 ) ),
-        ( true, false ) => MAX >> ( 40 - 8 * j ),
-        ( false, true ) => MAX << ( 8 * j - 16 ),
-        ( false, false ) => panic!( "How?! What sorcery is this!?" ),
+    let influence_rank: u64 = match ( ( j + size ) < 7, j > size ) {
+        ( true, true ) => ( MAX >> ( 56 - 8 * ( j + size ) ) ) & ( MAX << ( 8 * ( j - size ) ) ),
+        ( true, false ) => MAX >> ( 56 - 8 * ( j + size ) ),
+        ( false, true ) => MAX << ( 8 * ( j - size ) ),
+        ( false, false ) => panic!( "You're trying to influence too much - just stop!" ),
     };
 
     let mut influence_file: u64 = 0u64;
-    let mut file = A_FILE;
-    for index in 0..8 {
-        if ( ( index + 3 ) > i ) && ( index < ( i + 3 ) ) {
-            influence_file |= file;
-        }
+    let mut iter = cmp::max( i, size ) - size;
+    let mut file = A_FILE << iter;
+    let end = cmp::min( i + size, 7 );
 
+    loop {
+        influence_file |= file;
         file <<= 1;
+        if iter == end { break; } else { iter += 1; }
     }
 
     influence_rank & influence_file
@@ -236,5 +238,9 @@ pub fn knight_attack( pos: u32 ) -> u64 {
         KNIGHT_PATTERN_C3 >> ( 18 - pos )
     };
 
-    attack & knight_influence( pos )
+    attack & influence( pos, 2 )
+}
+
+pub fn king_attack( pos: u32 ) -> u64 {
+    ( 1u64 << pos ) ^ influence( pos, 1 )
 }
