@@ -44,10 +44,10 @@ pub fn file_rank( pos: u32 ) -> ( u32, u32 ) {
 // Rook and Bishop Masks
 pub fn rook_mask( pos: u32 ) -> u64 {
     let ( i, j ) = file_rank( pos );
-    let rook_bb: u64 = 1 << pos;
+    let not_rook_bb: u64 = !( 1u64 << pos );
     let rook_mask: u64 = ( A_FILE_NE << i ) ^ ( FIRST_RANK_NE << ( 8 * j ) );
 
-    rook_mask & ( rook_mask ^ rook_bb )
+    rook_mask & not_rook_bb
 }
 
 pub fn bishop_mask( pos: u32 ) -> u64 {
@@ -243,4 +243,55 @@ pub fn knight_attack( pos: u32 ) -> u64 {
 
 pub fn king_attack( pos: u32 ) -> u64 {
     ( 1u64 << pos ) ^ influence( pos, 1 )
+}
+
+// Capture, as opposed to moving forward
+pub fn pawn_attack( pos: u32, color: u8 ) -> u64 {
+    let ( _i, j ) = file_rank( pos );
+
+    if j == 0 || j == 7 {
+        panic!( "A pawn cannot be on the first or the eigth rank!" );
+    }
+
+    let ( capture_rank, attack ): ( u32, u64 ) = match color {
+        WHITE => ( j + 1, PCP_W_A2 << ( pos - 8 ) ),
+        BLACK => ( j - 1, PCP_B_H7 >> ( 55 - pos ) ),
+        _ => panic!( "Invalid color!" ),
+    };
+
+    let capture_rank_fill = FIRST_RANK << ( 8 * capture_rank );
+
+    attack & capture_rank_fill
+}
+
+pub fn pawn_forward( pos: u32, color: u8, occupancy: u64 ) -> u64 {
+    let ( _i, j ) = file_rank( pos );
+
+    if j == 0 || j == 7 {
+        panic!( "A pawn cannot be on the first or the eigth rank!" );
+    }
+
+    let forward_1: u64 = match color {
+        WHITE => 1u64 << ( pos + 8 ),
+        BLACK => 1u64 << ( pos - 8 ),
+        _ => panic!( "Invalid color!" ),
+    };
+
+    if ( forward_1 & occupancy ) != 0 {
+        0u64
+    } else {
+        if ( j == 1 && color == WHITE ) || ( j == 6 && color == BLACK )
+        {
+            // Pawn hasn't moved yet
+            let forward_2: u64 = match color {
+                WHITE => 1u64 << ( pos + 16 ),
+                BLACK => 1u64 << ( pos - 16 ),
+                _ => panic!( "Invalid color!" ),
+            };
+
+            forward_1 | ( forward_2 ^ ( occupancy & forward_2 ) )
+        } else {
+            forward_1
+        }
+    }
 }

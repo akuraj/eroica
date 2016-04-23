@@ -39,10 +39,15 @@ use utils::*;
 use time::*;
 
 fn main() {
+    let t1 = precise_time_ns();
 
-    let x = king_attack( 27 );
+    let occ: u64 = 1u64 << 39;
+    let x = pawn_forward( 55, BLACK, occ );
     print_bb( &x );
 
+    let t2 = precise_time_ns();
+    println!( "\n\nTime taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+    
     /*
     let t1 = precise_time_ns();
     //check_stored_magics( ROOK );
