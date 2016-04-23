@@ -1,6 +1,7 @@
 //! Utils needed for various purposes
 
 use consts::*;
+use std::u64::MAX;
 
 // A simple fn to print a BitBoard
 pub fn print_bb( bb: &u64 ) {
@@ -202,4 +203,38 @@ pub fn bishop_attack( pos: u32, occupancy: u64 ) -> u64 {
     }
 
     attack
+}
+
+// Returns the rectangle of influence
+pub fn knight_influence( pos: u32 ) -> u64 {
+    let ( i, j ) = file_rank( pos );
+
+    let influence_rank: u64 = match ( j < 5, j > 2 ) {
+        ( true, true ) => ( MAX >> ( 40 - 8 * j ) ) & ( MAX << ( 8 * j - 16 ) ),
+        ( true, false ) => MAX >> ( 40 - 8 * j ),
+        ( false, true ) => MAX << ( 8 * j - 16 ),
+        ( false, false ) => panic!( "How?! What sorcery is this!?" ),
+    };
+
+    let mut influence_file: u64 = 0u64;
+    let mut file = A_FILE;
+    for index in 0..8 {
+        if ( ( index + 3 ) > i ) && ( index < ( i + 3 ) ) {
+            influence_file |= file;
+        }
+
+        file <<= 1;
+    }
+
+    influence_rank & influence_file
+}
+
+pub fn knight_attack( pos: u32 ) -> u64 {
+    let attack: u64 = if pos > 18 {
+        KNIGHT_PATTERN_C3 << ( pos - 18 )
+    } else {
+        KNIGHT_PATTERN_C3 >> ( 18 - pos )
+    };
+
+    attack & knight_influence( pos )
 }

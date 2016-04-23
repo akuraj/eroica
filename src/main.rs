@@ -40,11 +40,21 @@ use time::*;
 
 fn main() {
 
+    let x = knight_attack( 27 );
+    print_bb( &x );
+
+    /*
     let t1 = precise_time_ns();
-    check_stored_magics( ROOK );
-    check_stored_magics( BISHOP );
+    //check_stored_magics( ROOK );
+    //check_stored_magics( BISHOP );
+    let mut x: u64;
+    for i in 0..64 {
+        x = magic( i as u32, ROOK, false );
+        x = magic( i as u32, BISHOP, false );
+    }
     let t2 = precise_time_ns();
     println!( "\n\nTime taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+    */
 
     /*
     let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";

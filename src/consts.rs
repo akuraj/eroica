@@ -37,3 +37,4 @@ pub const URT: u64 = 0xFEFCF8F0E0C08000u64; // i + j > 7
 pub const LLT: u64 = !URT; // i + j <= 7 // includes A8_H1
 pub const EDGES: u64 = 0xFF818181818181FFu64;
 pub const NOT_EDGES: u64 = !EDGES;
+pub const KNIGHT_PATTERN_C3: u64 = 0x0000000A1100110Au64;
