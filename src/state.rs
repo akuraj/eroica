@@ -50,32 +50,6 @@ impl BitBoard {
     }
 }
 
-pub fn algebraic_to_offset( square: &str ) -> u8 {
-    assert!( square.chars().count() == 2, "Invalid algebraic address \"{}\"", square );
-    let mut char_iter = square.chars().enumerate();
-    let mut offset: u8 = 0;
-
-    while let Some( ( i, c ) ) = char_iter.next() {
-        match i {
-            0 => {
-                assert!( 'a' <= c && c <= 'h', "Invalid file: {}", c );
-                offset += c as u8 - 'a' as u8;
-            },
-            1 => {
-                if let Some( rank_number ) = c.to_digit( 10 ) {
-                    assert!( 1 <= rank_number && rank_number <= 8, "Invalid rank: {}", c );
-                    offset += ( rank_number as u8 - 1 ) * 8;
-                } else {
-                    panic!( "Invalid rank: {}", c );
-                }
-            },
-            _ => panic!( "Invalid algebraic address \"{}\"", square ),
-        }
-    }
-
-    offset
-}
-
 // Move
 pub struct Move {
     pub piece: u8,
