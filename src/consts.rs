@@ -40,3 +40,7 @@ pub const NOT_EDGES: u64 = !EDGES;
 pub const KNIGHT_PATTERN_C3: u64 = 0x0000000A1100110Au64;
 pub const PCP_W_A2: u64 = 0x0000000000028000u64; // Pawn Capture Pattern
 pub const PCP_B_H7: u64 = 0x0001400000000000u64; // Pawn Capture Pattern
+pub const ROOK_WKC: u64 = 0x00000000000000A0u64; // Castling Pattern
+pub const ROOK_WQC: u64 = 0x0000000000000009u64; // Castling Pattern
+pub const ROOK_BKC: u64 = ROOK_WKC << 56; // Castling Pattern
+pub const ROOK_BQC: u64 = ROOK_WQC << 56; // Castling Pattern

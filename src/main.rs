@@ -41,9 +41,12 @@ use time::*;
 fn main() {
     let t1 = precise_time_ns();
 
-    let occ: u64 = 1u64 << 39;
-    let x = pawn_forward( 55, BLACK, occ );
-    print_bb( &x );
+    //let occ: u64 = 1u64 << 39;
+    //let x = pawn_forward( 55, BLACK, occ );
+    print_bb( &ROOK_WKC );
+    print_bb( &ROOK_WQC );
+    print_bb( &ROOK_BKC );
+    print_bb( &ROOK_BQC );
 
     let t2 = precise_time_ns();
     println!( "\n\nTime taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
