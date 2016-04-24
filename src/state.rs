@@ -2,6 +2,7 @@
 
 use std::ops::{ Index, IndexMut };
 use std::default::Default;
+use std::fmt;
 use consts::*;
 use utils::*;
 
@@ -30,10 +31,10 @@ impl IndexMut<u8> for BitBoard {
 
 impl BitBoard {
     pub fn set_all( &mut self ) {
-        self[ WHITE | ALL ] = self[ WHITE | PAWN ] | self[ WHITE | KNIGHT ] | self[ WHITE | BISHOP ] |
-                              self[ WHITE | ROOK ] | self[ WHITE | QUEEN ] | self[ WHITE | KING ];
-        self[ BLACK | ALL ] = self[ BLACK | PAWN ] | self[ BLACK | KNIGHT ] | self[ BLACK | BISHOP ] |
-                              self[ BLACK | ROOK ] | self[ BLACK | QUEEN ] | self[ BLACK | KING ];
+        self[ WHITE_ALL ] = self[ WHITE_PAWN ] | self[ WHITE_KNIGHT ] | self[ WHITE_BISHOP ] |
+                              self[ WHITE_ROOK ] | self[ WHITE_QUEEN ] | self[ WHITE_KING ];
+        self[ BLACK_ALL ] = self[ BLACK_PAWN ] | self[ BLACK_KNIGHT ] | self[ BLACK_BISHOP ] |
+                              self[ BLACK_ROOK ] | self[ BLACK_QUEEN ] | self[ BLACK_KING ];
     }
 
     pub fn generate_bb_from_sb( sb: &SimpleBoard ) -> Self {
@@ -136,6 +137,12 @@ impl Default for State {
     }
 }
 
+impl fmt::Display for State {
+    fn fmt( &self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!( f, "(yo)" )
+    }
+}
+
 impl State {
     pub fn generate_state_from_fen( fen: &str ) -> Self {
         // Check that fen specifies the required number of fields
@@ -163,22 +170,7 @@ impl State {
                             if let Some( empty_space ) = c.to_digit( 10 ) {
                                 position_offset += empty_space as usize;
                             } else {
-                                state.simple_board[ position_offset ] = match c {
-                                    'P' => WHITE | PAWN,
-                                    'N' => WHITE | KNIGHT,
-                                    'B' => WHITE | BISHOP,
-                                    'R' => WHITE | ROOK,
-                                    'Q' => WHITE | QUEEN,
-                                    'K' => WHITE | KING,
-                                    'p' => BLACK | PAWN,
-                                    'n' => BLACK | KNIGHT,
-                                    'b' => BLACK | BISHOP,
-                                    'r' => BLACK | ROOK,
-                                    'q' => BLACK | QUEEN,
-                                    'k' => BLACK | KING,
-                                     _  => panic!( "Invalid piece: {}", c ),
-                                };
-
+                                state.simple_board[ position_offset ] = char_to_piece( c );
                                 position_offset += 1;
                             }
                         }
@@ -245,106 +237,95 @@ impl State {
 
     pub fn make( &mut self, mv: &Move ) {
         let side = self.to_move;
-        let opp_side = side ^ 1u8;
 
-        assert!( ( mv.piece & side ) != 0, "Why are you moving the opponent's pieces?" );
-
-        // Update simple_board
+        // Update simple_board and bit_board
         self.simple_board[ mv.from as usize ] = EMPTY;
         self.simple_board[ mv.to as usize ] = mv.piece;
-
-        // Update bit_board
-        let mv_bb: u64 = ( 1u64 << mv.from ) | ( 1u64 << mv.to );
-        self.bit_board[ mv.piece ] ^= mv_bb;
-        if mv.capture != EMPTY {
-            let mv_bb_opp: u64 = 1u64 << mv.to;
-            self.bit_board[ mv.capture ] ^= mv_bb_opp;
-        }
+        self.bit_board[ mv.piece ] ^= ( 1u64 << mv.from ) | ( 1u64 << mv.to );
+        if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
 
         // Update castling state and en_passant
         // Update simple_board and bit_board for Rook if castling
         let mut new_ep = EMPTY;
-        match side {
-            WHITE => {
-                if ( mv.piece & PAWN ) != 0 {
-                    match mv.to - mv.from {
-                        8 => {}, // forward_1, nothing to do
-                        16 => { new_ep = mv.from + 8; }, // forward_2, set en_passant capture
-                        _ => {
-                            if self.en_passant == mv.to {
-                                // en_passant capture
-                                self.simple_board[ ( mv.to - 8 ) as usize ] = EMPTY;
-                                self.bit_board[ BLACK | PAWN ] ^= 1u64 << ( mv.to - 8 );
-                            }
-                        },
-                    }
-                } else if ( mv.piece & KING ) != 0 {
-                    match mv.castling() {
-                        WK_CASTLE => {
-                            self.simple_board[ 7 ] = EMPTY;
-                            self.simple_board[ 5 ] = WHITE | ROOK;
-                            self.bit_board[ WHITE | ROOK ] ^= ROOK_WKC;
-                        },
-                        WQ_CASTLE => {
-                            self.simple_board[ 0 ] = EMPTY;
-                            self.simple_board[ 3 ] = WHITE | ROOK;
-                            self.bit_board[ WHITE | ROOK ] ^= ROOK_WQC;
-                        },
-                        _ => {},
-                    };
-
-                    self.castling &= !W_CASTLE;
-                } else if ( mv.piece & ROOK ) != 0 {
-                    match mv.from {
-                        0 => self.castling &= !WQ_CASTLE,
-                        7 => self.castling &= !WK_CASTLE,
-                        _ => {},
-                    }
+        match mv.piece {
+            WHITE_PAWN => {
+                match mv.to - mv.from {
+                    8 => {}, // forward_1, nothing to do
+                    16 => { new_ep = mv.from + 8; }, // forward_2, set en_passant capture
+                    _ => {
+                        if self.en_passant == mv.to {
+                            self.simple_board[ ( mv.to - 8 ) as usize ] = EMPTY;
+                            self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
+                        }
+                    },
                 }
             },
-            BLACK => {
-                if ( mv.piece & PAWN ) != 0 {
-                    match mv.from - mv.to {
-                        8 => {}, // forward_1, nothing to do
-                        16 => { new_ep = mv.to + 8; }, // forward_2, set en_passant capture
-                        _ => {
-                            if self.en_passant == mv.to {
-                                // en_passant capture
-                                self.simple_board[ ( mv.to + 8 ) as usize ] = EMPTY;
-                                self.bit_board[ WHITE | PAWN ] ^= 1u64 << ( mv.to + 8 );
-                            }
-                        },
-                    }
-                } else if ( mv.piece & KING ) != 0 {
-                    match mv.castling() {
-                        BK_CASTLE => {
-                            self.simple_board[ 63 ] = EMPTY;
-                            self.simple_board[ 61 ] = BLACK | ROOK;
-                            self.bit_board[ BLACK | ROOK ] ^= ROOK_BKC;
-                        },
-                        BQ_CASTLE => {
-                            self.simple_board[ 56 ] = EMPTY;
-                            self.simple_board[ 59 ] = BLACK | ROOK;
-                            self.bit_board[ BLACK | ROOK ] ^= ROOK_BQC;
-                        },
-                        _ => {},
-                    };
+            WHITE_KING => {
+                match mv.castling() {
+                    WK_CASTLE => {
+                        self.simple_board[ 7 ] = EMPTY;
+                        self.simple_board[ 5 ] = WHITE_ROOK;
+                        self.bit_board[ WHITE_ROOK ] ^= ROOK_WKC;
+                    },
+                    WQ_CASTLE => {
+                        self.simple_board[ 0 ] = EMPTY;
+                        self.simple_board[ 3 ] = WHITE_ROOK;
+                        self.bit_board[ WHITE_ROOK ] ^= ROOK_WQC;
+                    },
+                    _ => {},
+                };
 
-                    self.castling &= !B_CASTLE;
-                } else if ( mv.piece & ROOK ) != 0 {
-                    match mv.from {
-                        56 => self.castling &= !BQ_CASTLE,
-                        63 => self.castling &= !BK_CASTLE,
-                        _ => {},
-                    }
+                self.castling &= !W_CASTLE;
+            },
+            WHITE_ROOK => {
+                match mv.from {
+                    0 => self.castling &= !WQ_CASTLE,
+                    7 => self.castling &= !WK_CASTLE,
+                    _ => {},
                 }
             },
-            _ => panic!( "Invalid color!" ),
+            BLACK_PAWN => {
+                match mv.from - mv.to {
+                    8 => {}, // forward_1, nothing to do
+                    16 => { new_ep = mv.to + 8; }, // forward_2, set en_passant capture
+                    _ => {
+                        if self.en_passant == mv.to {
+                            self.simple_board[ ( mv.to + 8 ) as usize ] = EMPTY;
+                            self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
+                        }
+                    },
+                }
+            },
+            BLACK_KING => {
+                match mv.castling() {
+                    BK_CASTLE => {
+                        self.simple_board[ 63 ] = EMPTY;
+                        self.simple_board[ 61 ] = BLACK_ROOK;
+                        self.bit_board[ BLACK_ROOK ] ^= ROOK_BKC;
+                    },
+                    BQ_CASTLE => {
+                        self.simple_board[ 56 ] = EMPTY;
+                        self.simple_board[ 59 ] = BLACK_ROOK;
+                        self.bit_board[ BLACK_ROOK ] ^= ROOK_BQC;
+                    },
+                    _ => {},
+                };
+
+                self.castling &= !B_CASTLE;
+            },
+            BLACK_ROOK => {
+                match mv.from {
+                    56 => self.castling &= !BQ_CASTLE,
+                    63 => self.castling &= !BK_CASTLE,
+                    _ => {},
+                }
+            },
+            _ => {},
         }
 
         self.bit_board.set_all(); // update 'ALL' bit_boards
         self.en_passant = new_ep; // set en_passant
-        self.to_move = opp_side; // set side
+        self.to_move ^= COLOR; // set side
         if side == BLACK { self.fullmove_count += 1; } // update fullmove_count
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
@@ -353,6 +334,73 @@ impl State {
     }
 
     pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
+        let side = self.to_move ^ COLOR; // side that just moved
 
+        // Update simple_board and bit_board
+        self.simple_board[ mv.from as usize ] = mv.piece;
+        self.simple_board[ mv.to as usize ] = mv.capture;
+        self.bit_board[ mv.piece ] ^= ( 1u64 << mv.from ) | ( 1u64 << mv.to );
+        if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
+
+        // Undo castling and en_passant
+        match side {
+            WHITE => {
+                if ( mv.piece & PAWN ) != 0 {
+                    if irs.en_passant == mv.to {
+                        self.simple_board[ ( mv.to - 8 ) as usize ] = BLACK_PAWN;
+                        self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
+                    }
+                } else if ( mv.piece & KING ) != 0 {
+                    match mv.castling() {
+                        WK_CASTLE => {
+                            self.simple_board[ 7 ] = WHITE_ROOK;
+                            self.simple_board[ 5 ] = EMPTY;
+                            self.bit_board[ WHITE_ROOK ] ^= ROOK_WKC;
+                        },
+                        WQ_CASTLE => {
+                            self.simple_board[ 0 ] = WHITE_ROOK;
+                            self.simple_board[ 3 ] = EMPTY;
+                            self.bit_board[ WHITE_ROOK ] ^= ROOK_WQC;
+                        },
+                        _ => {},
+                    }
+                }
+            },
+            BLACK => {
+                if ( mv.piece & PAWN ) != 0 {
+                    if irs.en_passant == mv.to {
+                        self.simple_board[ ( mv.to + 8 ) as usize ] = WHITE_PAWN;
+                        self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
+                    }
+                } else if ( mv.piece & KING ) != 0 {
+                    match mv.castling() {
+                        BK_CASTLE => {
+                            self.simple_board[ 63 ] = BLACK_ROOK;
+                            self.simple_board[ 61 ] = EMPTY;
+                            self.bit_board[ BLACK_ROOK ] ^= ROOK_BKC;
+                        },
+                        BQ_CASTLE => {
+                            self.simple_board[ 56 ] = BLACK_ROOK;
+                            self.simple_board[ 59 ] = EMPTY;
+                            self.bit_board[ BLACK_ROOK ] ^= ROOK_BQC;
+                        },
+                        _ => {},
+                    }
+                }
+            },
+            _ => panic!( "Invalid color!" ),
+        }
+
+        // set IRState
+        self.castling = irs.castling;
+        self.en_passant = irs.en_passant;
+        self.halfmove_clock = irs.halfmove_clock;
+
+        self.bit_board.set_all(); // update 'ALL' bit_boards
+        self.to_move ^= COLOR; // set side
+        if side == BLACK { self.fullmove_count -= 1; } // update fullmove_count
+
+        // update repetition table
+        // update other blah
     }
 }

@@ -41,6 +41,45 @@ pub fn file_rank( pos: u32 ) -> ( u32, u32 ) {
     ( pos % 8, pos / 8 )
 }
 
+// char to piece
+pub fn char_to_piece( c: char ) -> u8 {
+    match c {
+        'P' => WHITE_PAWN,
+        'N' => WHITE_KNIGHT,
+        'B' => WHITE_BISHOP,
+        'R' => WHITE_ROOK,
+        'Q' => WHITE_QUEEN,
+        'K' => WHITE_KING,
+        'p' => BLACK_PAWN,
+        'n' => BLACK_KNIGHT,
+        'b' => BLACK_BISHOP,
+        'r' => BLACK_ROOK,
+        'q' => BLACK_QUEEN,
+        'k' => BLACK_KING,
+         _  => panic!( "Invalid piece: {}", c ),
+    }
+}
+
+// char to piece
+pub fn piece_to_char( piece: u8 ) -> char {
+    match piece {
+        WHITE_PAWN => 'P',
+        WHITE_KNIGHT => 'N',
+        WHITE_BISHOP => 'B',
+        WHITE_ROOK => 'R',
+        WHITE_QUEEN => 'Q',
+        WHITE_KING => 'K',
+        BLACK_PAWN => 'p',
+        BLACK_KNIGHT => 'n',
+        BLACK_BISHOP => 'b',
+        BLACK_ROOK => 'r',
+        BLACK_QUEEN => 'q',
+        BLACK_KING => 'k',
+        EMPTY => ' ',        
+         _  => panic!( "Invalid piece: {}", piece ),
+    }
+}
+
 // Rook and Bishop Masks
 pub fn rook_mask( pos: u32 ) -> u64 {
     let ( i, j ) = file_rank( pos );

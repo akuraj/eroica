@@ -15,6 +15,22 @@ pub const QUEEN: u8 = 4 << 1;
 pub const KING: u8 = 5 << 1;
 pub const ALL: u8 = 6 << 1;
 
+// Enumerate pieces
+pub const WHITE_PAWN: u8 = WHITE | PAWN;
+pub const WHITE_KNIGHT: u8 = WHITE | KNIGHT;
+pub const WHITE_BISHOP: u8 = WHITE | BISHOP;
+pub const WHITE_ROOK: u8 = WHITE | ROOK;
+pub const WHITE_QUEEN: u8 = WHITE | QUEEN;
+pub const WHITE_KING: u8 = WHITE | KING;
+pub const WHITE_ALL: u8 = WHITE | ALL;
+pub const BLACK_PAWN: u8 = BLACK | PAWN;
+pub const BLACK_KNIGHT: u8 = BLACK | KNIGHT;
+pub const BLACK_BISHOP: u8 = BLACK | BISHOP;
+pub const BLACK_ROOK: u8 = BLACK | ROOK;
+pub const BLACK_QUEEN: u8 = BLACK | QUEEN;
+pub const BLACK_KING: u8 = BLACK | KING;
+pub const BLACK_ALL: u8 = BLACK | ALL;
+
 // Castling types
 pub const WK_CASTLE: u8 = 1;
 pub const BK_CASTLE: u8 = WK_CASTLE << BLACK;
