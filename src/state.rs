@@ -113,7 +113,57 @@ impl Default for State {
 
 impl fmt::Display for State {
     fn fmt( &self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!( f, "(yo)" )
+        let mut output = String::new();
+
+        // Board
+        let top = " ___ ___ ___ ___ ___ ___ ___ ___ \n";
+        let start  = "|   |   |   |   |   |   |   |   |\n";
+        let end  = "\n|___|___|___|___|___|___|___|___|\n";
+
+        output.push_str( top );
+
+        for j in ( 0..8 ).rev() {
+            output.push_str( start );
+            output.push( '|' );
+
+            for i in 0..8 {
+                output.push( ' ' );
+                output.push( piece_to_char( self.simple_board[ ( i + 8 * j ) as usize ] ) );
+                output.push_str( " |" );
+            }
+
+            output.push_str( end );
+        }
+
+        output.push( '\n' );
+
+        // Rest of the State
+        match self.to_move {
+            WHITE => output.push_str( "To move: White\n" ),
+            BLACK => output.push_str( "To move: Black\n" ),
+            _ => panic!( "Invalid color!" ),
+        };
+
+        output.push_str( "Castling: " );
+        if self.castling & WK_CASTLE != 0 { output.push( 'K') }
+        if self.castling & WQ_CASTLE != 0 { output.push( 'Q') }
+        if self.castling & BK_CASTLE != 0 { output.push( 'k') }
+        if self.castling & BQ_CASTLE != 0 { output.push( 'q') }
+        output.push( '\n' );
+
+        output.push_str( "En Passant: " );
+        if self.en_passant != EMPTY { output.push_str( &offset_to_algebraic( self.en_passant ) ) }
+        output.push( '\n' );
+
+        output.push_str( "Halfmove Clock: " );
+        output.push_str( &( self.halfmove_clock.to_string() ) );
+        output.push( '\n' );
+
+        output.push_str( "Fullmove Count: " );
+        output.push_str( &( self.fullmove_count.to_string() ) );
+        output.push( '\n' );
+
+        write!( f, "{}", output )
     }
 }
 
@@ -207,6 +257,10 @@ impl State {
         // FIXME: Implement a state check
 
         state
+    }
+
+    pub fn ir_state( &self ) -> IRState {
+        IRState{ castling: self.castling, en_passant: self.en_passant, halfmove_clock: self.halfmove_clock }
     }
 
     pub fn make( &mut self, mv: &Move ) {
