@@ -37,7 +37,7 @@ pub fn print_bb( bb: &u64 ) {
 }
 
 // ( file, rank )
-pub fn file_rank( pos: u32 ) -> ( u32, u32 ) {
+pub fn file_rank( pos: usize ) -> ( usize, usize ) {
     ( pos % 8, pos / 8 )
 }
 
@@ -80,21 +80,21 @@ pub fn piece_to_char( piece: u8 ) -> char {
     }
 }
 
-pub fn algebraic_to_offset( square: &str ) -> u8 {
+pub fn algebraic_to_offset( square: &str ) -> usize {
     assert!( square.chars().count() == 2, "Invalid algebraic address \"{}\"", square );
     let mut char_iter = square.chars().enumerate();
-    let mut offset: u8 = 0;
+    let mut offset: usize = 0;
 
     while let Some( ( i, c ) ) = char_iter.next() {
         match i {
             0 => {
                 assert!( 'a' <= c && c <= 'h', "Invalid file: {}", c );
-                offset += c as u8 - 'a' as u8;
+                offset += c as usize - 'a' as usize;
             },
             1 => {
                 if let Some( rank_number ) = c.to_digit( 10 ) {
                     assert!( 1 <= rank_number && rank_number <= 8, "Invalid rank: {}", c );
-                    offset += ( rank_number as u8 - 1 ) * 8;
+                    offset += ( rank_number as usize - 1 ) * 8;
                 } else {
                     panic!( "Invalid rank: {}", c );
                 }
@@ -106,11 +106,11 @@ pub fn algebraic_to_offset( square: &str ) -> u8 {
     offset
 }
 
-pub fn offset_to_algebraic( offset: u8 ) -> String {
+pub fn offset_to_algebraic( offset: usize ) -> String {
     assert!( offset < 64, "Square address out of bounds!" );
 
     let mut algebraic = String::new();
-    let ( i, j ) = file_rank( offset as u32 );
+    let ( i, j ) = file_rank( offset );
     let file = match i {
         0 => 'a',
         1 => 'b',
@@ -130,7 +130,7 @@ pub fn offset_to_algebraic( offset: u8 ) -> String {
 }
 
 // Rook and Bishop Masks
-pub fn rook_mask( pos: u32 ) -> u64 {
+pub fn rook_mask( pos: usize ) -> u64 {
     let ( i, j ) = file_rank( pos );
     let not_rook_bb: u64 = !( 1u64 << pos );
     let rook_mask: u64 = ( A_FILE_NE << i ) ^ ( FIRST_RANK_NE << ( 8 * j ) );
@@ -138,7 +138,7 @@ pub fn rook_mask( pos: u32 ) -> u64 {
     rook_mask & not_rook_bb
 }
 
-pub fn bishop_mask( pos: u32 ) -> u64 {
+pub fn bishop_mask( pos: usize ) -> u64 {
     let ( i, j ) = file_rank( pos );
     let s = i + j;
 
@@ -174,12 +174,12 @@ pub fn occupancies( mask: u64 ) -> Vec<u64> {
 }
 
 // Rook and Bishop attacks
-pub fn rook_attack( pos: u32, occupancy: u64 ) -> u64 {
+pub fn rook_attack( pos: usize, occupancy: u64 ) -> u64 {
     let ( i, j ) = file_rank( pos );
 
-    let mut file_iter: u32;
-    let mut rank_iter: u32;
-    let mut pos_iter: u32;
+    let mut file_iter: usize;
+    let mut rank_iter: usize;
+    let mut pos_iter: usize;
 
     let mut attack: u64 = 0u64;
 
@@ -230,12 +230,12 @@ pub fn rook_attack( pos: u32, occupancy: u64 ) -> u64 {
     attack
 }
 
-pub fn bishop_attack( pos: u32, occupancy: u64 ) -> u64 {
+pub fn bishop_attack( pos: usize, occupancy: u64 ) -> u64 {
     let ( i, j ) = file_rank( pos );
 
-    let mut file_iter: u32;
-    let mut rank_iter: u32;
-    let mut pos_iter: u32;
+    let mut file_iter: usize;
+    let mut rank_iter: usize;
+    let mut pos_iter: usize;
 
     let mut attack: u64 = 0u64;
 
@@ -295,7 +295,7 @@ pub fn bishop_attack( pos: u32, occupancy: u64 ) -> u64 {
 }
 
 // Returns the rectangle of influence
-pub fn influence( pos: u32, size: u32 ) -> u64 {
+pub fn influence( pos: usize, size: usize ) -> u64 {
     let ( i, j ) = file_rank( pos );
 
     let influence_rank: u64 = match ( ( j + size ) < 7, j > size ) {
@@ -319,7 +319,7 @@ pub fn influence( pos: u32, size: u32 ) -> u64 {
     influence_rank & influence_file
 }
 
-pub fn knight_attack( pos: u32 ) -> u64 {
+pub fn knight_attack( pos: usize ) -> u64 {
     let attack: u64 = if pos > 18 {
         KNIGHT_PATTERN_C3 << ( pos - 18 )
     } else {
@@ -329,18 +329,18 @@ pub fn knight_attack( pos: u32 ) -> u64 {
     attack & influence( pos, 2 )
 }
 
-pub fn king_attack( pos: u32 ) -> u64 {
+pub fn king_attack( pos: usize ) -> u64 {
     ( 1u64 << pos ) ^ influence( pos, 1 )
 }
 
-pub fn pawn_capture( pos: u32, color: u8 ) -> u64 {
+pub fn pawn_capture( pos: usize, color: u8 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
         panic!( "A pawn cannot be on the first or the eigth rank!" );
     }
 
-    let ( capture_rank, attack ): ( u32, u64 ) = match color {
+    let ( capture_rank, attack ): ( usize, u64 ) = match color {
         WHITE => ( j + 1, PCP_W_A2 << ( pos - 8 ) ),
         BLACK => ( j - 1, PCP_B_H7 >> ( 55 - pos ) ),
         _ => panic!( "Invalid color!" ),
@@ -351,7 +351,7 @@ pub fn pawn_capture( pos: u32, color: u8 ) -> u64 {
     attack & capture_rank_fill
 }
 
-pub fn pawn_forward( pos: u32, color: u8, occupancy: u64 ) -> u64 {
+pub fn pawn_forward( pos: usize, color: u8, occupancy: u64 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {

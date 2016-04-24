@@ -63,16 +63,15 @@ pub fn is_magic( guess: u64, occupancies: &[ u64 ], attacks: &[ u64 ], shift: u8
 }
 
 pub fn check_stored_magics( piece: u8 ) {
-    let ( mask_fn, shifts, attack, magics ): ( fn( u32 ) -> u64, [ u8; 64 ], fn( u32, u64 ) -> u64, [ u64; 64 ] ) = match piece {
+    let ( mask_fn, shifts, attack, magics ): ( fn( usize ) -> u64, [ u8; 64 ], fn( usize, u64 ) -> u64, [ u64; 64 ] ) = match piece {
         ROOK => ( rook_mask, ROOK_SHIFTS, rook_attack, ROOK_MAGICS ),
         BISHOP => ( bishop_mask, BISHOP_SHIFTS, bishop_attack, BISHOP_MAGICS ),
         _ => panic!( "Invalid piece!" ),
     };
 
-    for i in 0..64 {
-        let pos: u32 = i as u32;
+    for pos in 0..64 {
         let mask = mask_fn( pos );
-        let shift = shifts[ i ];
+        let shift = shifts[ pos ];
 
         assert!( ( 64 - shift ) == ( mask.count_ones() as u8 ) );
 
@@ -80,18 +79,18 @@ pub fn check_stored_magics( piece: u8 ) {
         let occupancies = occupancies( mask );
         let attacks: Vec<u64> = occupancies.iter().map( |x| attack( pos, *x ) ).collect();
 
-        if !is_magic( magics[ i ], &occupancies, &attacks, shift ) {
+        if !is_magic( magics[ pos ], &occupancies, &attacks, shift ) {
             panic!( "Magic is not magical!\nPiece: {}, Pos: {}", if piece == ROOK { "Rook" } else { "Bishop" }, pos );
         }
     }
 }
 
-pub fn magic( pos: u32, piece: u8, verbose: bool ) -> u64 {
+pub fn magic( pos: usize, piece: u8, verbose: bool ) -> u64 {
     assert!( pos < 64, "Square address out of bounds!" );
 
-    let ( mask, shift, attack ): ( u64, u8, fn( u32, u64 ) -> u64 ) = match piece {
-        ROOK => ( rook_mask( pos ), ROOK_SHIFTS[ pos as usize ], rook_attack ),
-        BISHOP => ( bishop_mask( pos ), BISHOP_SHIFTS[ pos as usize ], bishop_attack ),
+    let ( mask, shift, attack ): ( u64, u8, fn( usize, u64 ) -> u64 ) = match piece {
+        ROOK => ( rook_mask( pos ), ROOK_SHIFTS[ pos ], rook_attack ),
+        BISHOP => ( bishop_mask( pos ), BISHOP_SHIFTS[ pos ], bishop_attack ),
         _ => panic!( "Invalid piece!" ),
     };
 

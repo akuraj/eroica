@@ -53,8 +53,8 @@ impl BitBoard {
 // Move
 pub struct Move {
     pub piece: u8,
-    pub from: u8,
-    pub to: u8,
+    pub from: usize,
+    pub to: usize,
     pub capture: u8,
 }
 
@@ -80,7 +80,7 @@ impl Move {
 // Irreversible State
 pub struct IRState {
     pub castling: u8,
-    pub en_passant: u8, // Store the pos (square address)
+    pub en_passant: usize, // Store the pos (square address)
     pub halfmove_clock: u8,
 }
 
@@ -90,7 +90,7 @@ pub struct State {
     pub bit_board: BitBoard,
     pub to_move: u8,
     pub castling: u8,
-    pub en_passant: u8, // Store the pos (square address)
+    pub en_passant: usize, // Store the pos (square address)
     pub halfmove_clock: u8,
     pub fullmove_count: u8,
 
@@ -105,7 +105,7 @@ impl Default for State {
                 bit_board: BitBoard( [ 0u64; 14 ] ),
                 to_move: 0,
                 castling: 0,
-                en_passant: EMPTY,
+                en_passant: NO_EP,
                 halfmove_clock: 0,
                 fullmove_count: 0, }
     }
@@ -128,7 +128,7 @@ impl fmt::Display for State {
 
             for i in 0..8 {
                 output.push( ' ' );
-                output.push( piece_to_char( self.simple_board[ ( i + 8 * j ) as usize ] ) );
+                output.push( piece_to_char( self.simple_board[ i + 8 * j ] ) );
                 output.push_str( " |" );
             }
 
@@ -152,7 +152,7 @@ impl fmt::Display for State {
         output.push( '\n' );
 
         output.push_str( "En Passant: " );
-        if self.en_passant != EMPTY { output.push_str( &offset_to_algebraic( self.en_passant ) ) }
+        if self.en_passant != NO_EP { output.push_str( &offset_to_algebraic( self.en_passant ) ) }
         output.push( '\n' );
 
         output.push_str( "Halfmove Clock: " );
@@ -232,7 +232,7 @@ impl State {
                 3 => {
                     // en_passant
                     state.en_passant = match section {
-                        "-" => EMPTY,
+                        "-" => NO_EP,
                          _  => algebraic_to_offset( section ),
                     }
                 },
@@ -267,14 +267,14 @@ impl State {
         let side = self.to_move;
 
         // Update simple_board and bit_board
-        self.simple_board[ mv.from as usize ] = EMPTY;
-        self.simple_board[ mv.to as usize ] = mv.piece;
+        self.simple_board[ mv.from ] = EMPTY;
+        self.simple_board[ mv.to ] = mv.piece;
         self.bit_board[ mv.piece ] ^= ( 1u64 << mv.from ) | ( 1u64 << mv.to );
         if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
 
         // Update castling state and en_passant
         // Update simple_board and bit_board for Rook if castling
-        let mut new_ep = EMPTY;
+        let mut new_ep = NO_EP;
         match mv.piece {
             WHITE_PAWN => {
                 match mv.to - mv.from {
@@ -282,7 +282,7 @@ impl State {
                     16 => { new_ep = mv.from + 8; }, // forward_2, set en_passant capture
                     _ => {
                         if self.en_passant == mv.to {
-                            self.simple_board[ ( mv.to - 8 ) as usize ] = EMPTY;
+                            self.simple_board[ mv.to - 8 ] = EMPTY;
                             self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
                         }
                     },
@@ -318,7 +318,7 @@ impl State {
                     16 => { new_ep = mv.to + 8; }, // forward_2, set en_passant capture
                     _ => {
                         if self.en_passant == mv.to {
-                            self.simple_board[ ( mv.to + 8 ) as usize ] = EMPTY;
+                            self.simple_board[ mv.to + 8 ] = EMPTY;
                             self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
                         }
                     },
@@ -365,8 +365,8 @@ impl State {
         let side = self.to_move ^ COLOR; // side that just moved
 
         // Update simple_board and bit_board
-        self.simple_board[ mv.from as usize ] = mv.piece;
-        self.simple_board[ mv.to as usize ] = mv.capture;
+        self.simple_board[ mv.from ] = mv.piece;
+        self.simple_board[ mv.to ] = mv.capture;
         self.bit_board[ mv.piece ] ^= ( 1u64 << mv.from ) | ( 1u64 << mv.to );
         if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
 
@@ -374,7 +374,7 @@ impl State {
         match mv.piece {
             WHITE_PAWN => {
                 if irs.en_passant == mv.to {
-                    self.simple_board[ ( mv.to - 8 ) as usize ] = BLACK_PAWN;
+                    self.simple_board[ mv.to - 8 ] = BLACK_PAWN;
                     self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
                 }
             },
@@ -395,7 +395,7 @@ impl State {
             },
             BLACK_PAWN => {
                 if irs.en_passant == mv.to {
-                    self.simple_board[ ( mv.to + 8 ) as usize ] = WHITE_PAWN;
+                    self.simple_board[ mv.to + 8 ] = WHITE_PAWN;
                     self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
                 }
             },

@@ -41,9 +41,16 @@ use time::*;
 fn main() {
     let t1 = precise_time_ns();
 
-    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
+    //let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
+    let fen = "8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 -";
     let mut state = State::generate_state_from_fen( fen );
-    println!( "{}", state );
+    let mv = Move { piece: BLACK_KING, from: 30, to: 21, capture: EMPTY };
+    let irs = state.ir_state();
+
+    for i in 0..1000000000 {
+        state.make( &mv );
+        state.unmake( &mv, &irs );
+    }
 
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );

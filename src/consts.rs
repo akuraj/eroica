@@ -40,6 +40,9 @@ pub const BQ_CASTLE: u8 = WQ_CASTLE << BLACK;
 pub const W_CASTLE: u8 = WK_CASTLE | WQ_CASTLE;
 pub const B_CASTLE: u8 = BK_CASTLE | BQ_CASTLE;
 
+// Other
+pub const NO_EP: usize = !0usize; // Absense of EP
+
 // BitBoard Constants
 pub const FIRST_RANK: u64 = 0x00000000000000FFu64;
 pub const FIRST_RANK_NE: u64 = 0x000000000000007Eu64; // NO EDGES
