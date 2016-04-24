@@ -343,52 +343,50 @@ impl State {
         if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
 
         // Undo castling and en_passant
-        match side {
-            WHITE => {
-                if ( mv.piece & PAWN ) != 0 {
-                    if irs.en_passant == mv.to {
-                        self.simple_board[ ( mv.to - 8 ) as usize ] = BLACK_PAWN;
-                        self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
-                    }
-                } else if ( mv.piece & KING ) != 0 {
-                    match mv.castling() {
-                        WK_CASTLE => {
-                            self.simple_board[ 7 ] = WHITE_ROOK;
-                            self.simple_board[ 5 ] = EMPTY;
-                            self.bit_board[ WHITE_ROOK ] ^= ROOK_WKC;
-                        },
-                        WQ_CASTLE => {
-                            self.simple_board[ 0 ] = WHITE_ROOK;
-                            self.simple_board[ 3 ] = EMPTY;
-                            self.bit_board[ WHITE_ROOK ] ^= ROOK_WQC;
-                        },
-                        _ => {},
-                    }
+        match mv.piece {
+            WHITE_PAWN => {
+                if irs.en_passant == mv.to {
+                    self.simple_board[ ( mv.to - 8 ) as usize ] = BLACK_PAWN;
+                    self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
                 }
             },
-            BLACK => {
-                if ( mv.piece & PAWN ) != 0 {
-                    if irs.en_passant == mv.to {
-                        self.simple_board[ ( mv.to + 8 ) as usize ] = WHITE_PAWN;
-                        self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
-                    }
-                } else if ( mv.piece & KING ) != 0 {
-                    match mv.castling() {
-                        BK_CASTLE => {
-                            self.simple_board[ 63 ] = BLACK_ROOK;
-                            self.simple_board[ 61 ] = EMPTY;
-                            self.bit_board[ BLACK_ROOK ] ^= ROOK_BKC;
-                        },
-                        BQ_CASTLE => {
-                            self.simple_board[ 56 ] = BLACK_ROOK;
-                            self.simple_board[ 59 ] = EMPTY;
-                            self.bit_board[ BLACK_ROOK ] ^= ROOK_BQC;
-                        },
-                        _ => {},
-                    }
+            WHITE_KING => {
+                match mv.castling() {
+                    WK_CASTLE => {
+                        self.simple_board[ 7 ] = WHITE_ROOK;
+                        self.simple_board[ 5 ] = EMPTY;
+                        self.bit_board[ WHITE_ROOK ] ^= ROOK_WKC;
+                    },
+                    WQ_CASTLE => {
+                        self.simple_board[ 0 ] = WHITE_ROOK;
+                        self.simple_board[ 3 ] = EMPTY;
+                        self.bit_board[ WHITE_ROOK ] ^= ROOK_WQC;
+                    },
+                    _ => {},
                 }
             },
-            _ => panic!( "Invalid color!" ),
+            BLACK_PAWN => {
+                if irs.en_passant == mv.to {
+                    self.simple_board[ ( mv.to + 8 ) as usize ] = WHITE_PAWN;
+                    self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
+                }
+            },
+            BLACK_KING => {
+                match mv.castling() {
+                    BK_CASTLE => {
+                        self.simple_board[ 63 ] = BLACK_ROOK;
+                        self.simple_board[ 61 ] = EMPTY;
+                        self.bit_board[ BLACK_ROOK ] ^= ROOK_BKC;
+                    },
+                    BQ_CASTLE => {
+                        self.simple_board[ 56 ] = BLACK_ROOK;
+                        self.simple_board[ 59 ] = EMPTY;
+                        self.bit_board[ BLACK_ROOK ] ^= ROOK_BQC;
+                    },
+                    _ => {},
+                }
+            },
+            _ => {},
         }
 
         // set IRState
