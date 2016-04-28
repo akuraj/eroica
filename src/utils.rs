@@ -382,3 +382,9 @@ pub fn pawn_forward( pos: usize, color: u8, occupancy: u64 ) -> u64 {
         }
     }
 }
+
+pub fn pop_lsb( x: &mut u64 ) -> usize {
+    let pos = x.trailing_zeros() as usize;
+    *x &= *x - 1;
+    pos
+}
