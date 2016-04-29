@@ -42,14 +42,74 @@ use attacks::*;
 use rand::{ Rng, thread_rng };
 
 fn main() {
+    let mut att = Attacks { ..Default::default() };
+    att.init( true );
+
+    let t1 = precise_time_ns();
+
+    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
+    let state = State::generate_state_from_fen( fen );
+    println!( "{}", state );
+
+    let occ = state.bit_board[ WHITE_ALL ] | state.bit_board[ BLACK_ALL ];
+
+    let mut pawns: u64;
+    let mut pos: usize;
+    let mut fwd: u64;
+
+    for _ in 0..1000000000 {
+        pawns = state.bit_board[ WHITE_PAWN ];
+        while pawns != 0 {
+            pos = pop_lsb_pos( &mut pawns );
+            fwd = pawn_attack( pos, WHITE, occ );
+        }
+
+        pawns = state.bit_board[ BLACK_PAWN ];
+        while pawns != 0 {
+            pos = pop_lsb_pos( &mut pawns );
+            fwd = pawn_attack( pos, BLACK, occ );
+        }
+    }
+
+    let t2 = precise_time_ns();
+    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+
+
+    /*
+    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
+    let state = State::generate_state_from_fen( fen );
+    println!( "{}", state );
+
+    let occ = state.bit_board[ WHITE_ALL ] | state.bit_board[ BLACK_ALL ];
+
+    let mut pawns: u64;
+    let mut pos: usize;
+    let mut fwd: u64;
+
+    for _ in 0..1000000000 {
+        pawns = state.bit_board[ WHITE_PAWN ];
+        while pawns != 0 {
+            pos = pop_lsb_pos( &mut pawns );
+            fwd = pawn_forward( pos, WHITE, occ );
+        }
+
+        pawns = state.bit_board[ BLACK_PAWN ];
+        while pawns != 0 {
+            pos = pop_lsb_pos( &mut pawns );
+            fwd = pawn_forward( pos, BLACK, occ );
+        }
+    }
+    */
+
+
+
+    /*
     let mut randoms: Vec<u64> = Vec::new();
 
     let mut rng = thread_rng();
     for _ in 0..100000000 {
         randoms.push( rng.gen::<u64>() );
     }
-
-    let t1 = precise_time_ns();
 
     let mut x: u64;
     let mut pos: usize;
@@ -63,6 +123,7 @@ fn main() {
             pos = num.trailing_zeros() as usize;
         }
     }
+    */
 
     /*
     let mut att = Attacks { ..Default::default() };
@@ -83,9 +144,6 @@ fn main() {
         }
     }
     */
-
-    let t2 = precise_time_ns();
-    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 
     /*
     //let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";

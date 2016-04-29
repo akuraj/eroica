@@ -333,39 +333,23 @@ pub fn king_attack( pos: usize ) -> u64 {
     ( 1u64 << pos ) ^ influence( pos, 1 )
 }
 
-pub fn pawn_capture( pos: usize, color: u8 ) -> u64 {
+pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
         return 0u64;
     }
 
-    let ( capture_rank, attack ): ( usize, u64 ) = match color {
-        WHITE => ( j + 1, PCP_W_A2 << ( pos - 8 ) ),
-        BLACK => ( j - 1, PCP_B_H7 >> ( 55 - pos ) ),
+    let ( capture_rank, mut attack, forward_1 ): ( usize, u64, u64 ) = match color {
+        WHITE => ( j + 1, PCP_W_A2 << ( pos - 8 ), 1u64 << ( pos + 8 ) ),
+        BLACK => ( j - 1, PCP_B_H7 >> ( 55 - pos ), 1u64 << ( pos - 8 ) ),
         _ => panic!( "Invalid color!" ),
     };
 
-    let capture_rank_fill = FIRST_RANK << ( 8 * capture_rank );
-
-    attack & capture_rank_fill
-}
-
-pub fn pawn_forward( pos: usize, color: u8, occupancy: u64 ) -> u64 {
-    let ( _i, j ) = file_rank( pos );
-
-    if j == 0 || j == 7 {
-        return 0u64;
-    }
-
-    let forward_1: u64 = match color {
-        WHITE => 1u64 << ( pos + 8 ),
-        BLACK => 1u64 << ( pos - 8 ),
-        _ => panic!( "Invalid color!" ),
-    };
+    attack &= ( FIRST_RANK << ( 8 * capture_rank ) ) & occupancy;
 
     if ( forward_1 & occupancy ) != 0 {
-        0u64
+        attack
     } else {
         if ( j == 1 && color == WHITE ) || ( j == 6 && color == BLACK )
         {
@@ -376,9 +360,9 @@ pub fn pawn_forward( pos: usize, color: u8, occupancy: u64 ) -> u64 {
                 _ => panic!( "Invalid color!" ),
             };
 
-            forward_1 | ( forward_2 ^ ( occupancy & forward_2 ) )
+            attack | forward_1 | ( forward_2 & !occupancy )
         } else {
-            forward_1
+            attack | forward_1
         }
     }
 }

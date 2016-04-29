@@ -7,8 +7,6 @@ use utils::*;
 use magics::*;
 
 pub struct Attacks {
-    pub white_pawn_attacks: [ u64; 64 ],
-    pub black_pawn_attacks: [ u64; 64 ],
     pub knight_attacks: [ u64; 64 ],
     pub king_attacks: [ u64; 64 ],
 
@@ -27,9 +25,7 @@ pub struct Attacks {
 
 impl Default for Attacks {
     fn default() -> Self {
-        Attacks { white_pawn_attacks: [ 0u64; 64 ],
-                  black_pawn_attacks: [ 0u64; 64 ],
-                  knight_attacks: [ 0u64; 64 ],
+        Attacks { knight_attacks: [ 0u64; 64 ],
                   king_attacks: [ 0u64; 64 ],
                   bishop_masks: [ 0u64; 64 ],
                   bishop_shifts: [ 0u8; 64 ],
@@ -56,8 +52,6 @@ impl Attacks {
 
         for pos in 0..64 {
             // Compute and store attacks for non-sliding pieces
-            self.white_pawn_attacks[ pos ] = pawn_capture( pos, WHITE );
-            self.black_pawn_attacks[ pos ] = pawn_capture( pos, BLACK );
             self.knight_attacks[ pos ] = knight_attack( pos );
             self.king_attacks[ pos ] = king_attack( pos );
 
