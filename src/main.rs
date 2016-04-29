@@ -31,16 +31,41 @@ pub mod consts;
 pub mod state;
 pub mod utils;
 pub mod magics;
+pub mod attacks;
 
 use consts::*;
 use state::*;
 use magics::*;
 use utils::*;
 use time::*;
+use attacks::*;
 
 fn main() {
-    let t1 = precise_time_ns();
+    let mut att = Attacks { ..Default::default() };
+    att.init( true );
 
+    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
+    //let fen = "8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 -";
+    let mut state = State::generate_state_from_fen( fen );
+    println!( "{}", state );
+
+    let occ = state.bit_board[ WHITE_ALL ] | state.bit_board[ BLACK_ALL ];
+
+    let t1 = precise_time_ns();
+    let mut rmoves: u64;
+    
+    for _ in 0..100000000 {
+        for pos in 0..64 {
+            rmoves = att.r_moves( pos, occ );
+        }
+    }
+
+    //print_bb( &rmoves );
+
+    let t2 = precise_time_ns();
+    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+
+    /*
     //let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
     let fen = "8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 -";
     let mut state = State::generate_state_from_fen( fen );
@@ -51,9 +76,7 @@ fn main() {
         state.make( &mv );
         state.unmake( &mv, &irs );
     }
-
-    let t2 = precise_time_ns();
-    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+    */
 
     /*
     let mv = Move { piece: WHITE_KING, from: 4, to: 6, capture: EMPTY };

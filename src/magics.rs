@@ -46,52 +46,31 @@ pub fn magic_hash( magic: u64, occupancy: u64, shift: u8 ) -> usize {
     ( magic.wrapping_mul( occupancy ) >> shift ) as usize
 }
 
-pub fn is_magic( guess: u64, occupancies: &[ u64 ], attacks: &[ u64 ], shift: u8 ) -> bool {
-    let mut used: Vec<u64> = vec![ 0u64; occupancies.len() ];
+// Checks if the guess is a magic, and returns the hashed attacks if it is
+pub fn hashed_attacks( guess: u64, occupancies: &[ u64 ], attacks: &[ u64 ], shift: u8 ) -> Option<Vec<u64>> {
+    let mut hashed_attacks: Vec<u64> = vec![ 0u64; occupancies.len() ];
     let mut hash: usize;
 
     for ( i, occupancy ) in occupancies.iter().enumerate() {
         hash = magic_hash( guess, *occupancy, shift );
-        if used[ hash ] == 0u64 {
-            used[ hash ] = attacks[ i ];
-        } else if used[ hash ] != attacks[ i ] {
-            return false;
+        if hashed_attacks[ hash ] == 0u64 {
+            hashed_attacks[ hash ] = attacks[ i ];
+        } else if hashed_attacks[ hash ] != attacks[ i ] {
+            return None;
         }
     }
 
-    true
+    Some( hashed_attacks )
 }
 
-pub fn check_stored_magics( piece: u8 ) {
-    let ( mask_fn, shifts, attack, magics ): ( fn( usize ) -> u64, [ u8; 64 ], fn( usize, u64 ) -> u64, [ u64; 64 ] ) = match piece {
-        ROOK => ( rook_mask, ROOK_SHIFTS, rook_attack, ROOK_MAGICS ),
-        BISHOP => ( bishop_mask, BISHOP_SHIFTS, bishop_attack, BISHOP_MAGICS ),
-        _ => panic!( "Invalid piece!" ),
-    };
-
-    for pos in 0..64 {
-        let mask = mask_fn( pos );
-        let shift = shifts[ pos ];
-
-        assert!( ( 64 - shift ) == ( mask.count_ones() as u8 ) );
-
-        // Compute occupancies and attacks
-        let occupancies = occupancies( mask );
-        let attacks: Vec<u64> = occupancies.iter().map( |x| attack( pos, *x ) ).collect();
-
-        if !is_magic( magics[ pos ], &occupancies, &attacks, shift ) {
-            panic!( "Magic is not magical!\nPiece: {}, Pos: {}", if piece == ROOK { "Rook" } else { "Bishop" }, pos );
-        }
-    }
-}
-
-pub fn magic( pos: usize, piece: u8, verbose: bool ) -> u64 {
+// Returns magic number and hashed_attacks
+pub fn magic( pos: usize, piece: u8, stored: bool, verbose: bool ) -> ( u64, Vec<u64> ) {
     assert!( pos < 64, "Square address out of bounds!" );
 
-    let ( mask, shift, attack ): ( u64, u8, fn( usize, u64 ) -> u64 ) = match piece {
-        ROOK => ( rook_mask( pos ), ROOK_SHIFTS[ pos ], rook_attack ),
-        BISHOP => ( bishop_mask( pos ), BISHOP_SHIFTS[ pos ], bishop_attack ),
-        _ => panic!( "Invalid piece!" ),
+    let ( mask, shift, attack, stored_magic ): ( u64, u8, fn( usize, u64 ) -> u64, u64 ) = match piece {
+        ROOK => ( rook_mask( pos ), ROOK_SHIFTS[ pos ], rook_attack, ROOK_MAGICS[ pos ] ),
+        BISHOP => ( bishop_mask( pos ), BISHOP_SHIFTS[ pos ], bishop_attack, BISHOP_MAGICS[ pos ] ),
+        _ => panic!( "Invalid piece: we do magics only for Rooks and Bishops!" ),
     };
 
     assert!( ( 64 - shift ) == ( mask.count_ones() as u8 ) );
@@ -100,25 +79,34 @@ pub fn magic( pos: usize, piece: u8, verbose: bool ) -> u64 {
     let occupancies = occupancies( mask );
     let attacks: Vec<u64> = occupancies.iter().map( |x| attack( pos, *x ) ).collect();
 
-    // Trial and error to find the magic
-    let mut rng = thread_rng();
-    let mut guess: u64;
-    let mut tries = 0;
-
-    'main: loop {
-        'guess: loop {
-            guess = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>(); // num_bits: Mean = 8, StdDev = 2.65
-            if magic_hash( guess, mask, 56 ).count_ones() >= 6 { break 'guess; }
+    if stored {
+        // Check and return stored magic
+        if let Some( hashed_attacks ) = hashed_attacks( stored_magic, &occupancies, &attacks, shift ) {
+            return ( stored_magic, hashed_attacks );
+        } else {
+            panic!( "Stored magic is not magical!\nPiece: {}, Pos: {}", if piece == ROOK { "Rook" } else { "Bishop" }, pos );
         }
+    } else {
+        // Compute a magic afresh - trial and error
+        let mut rng = thread_rng();
+        let mut guess: u64;
+        let mut tries = 0;
 
-        tries += 1;
-
-        if is_magic( guess, &occupancies, &attacks, shift ) {
-            if verbose {
-                println!( "pos: {}, piece: {}, tries: {}\nmagic: {}", pos, if piece == ROOK { "Rook" } else { "Bishop" }, tries, guess );
+        'main: loop {
+            'guess: loop {
+                guess = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>(); // num_bits: Mean = 8, StdDev = 2.65
+                if magic_hash( guess, mask, 56 ).count_ones() >= 6 { break 'guess; }
             }
 
-            return guess;
+            tries += 1;
+
+            if let Some( hashed_attacks ) = hashed_attacks( guess, &occupancies, &attacks, shift ) {
+                if verbose {
+                    println!( "pos: {}, piece: {}, tries: {}\nmagic: {}", pos, if piece == ROOK { "Rook" } else { "Bishop" }, tries, guess );
+                }
+
+                return ( guess, hashed_attacks );
+            }
         }
     }
 }

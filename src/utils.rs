@@ -337,7 +337,7 @@ pub fn pawn_capture( pos: usize, color: u8 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
-        panic!( "A pawn cannot be on the first or the eigth rank!" );
+        return 0u64;
     }
 
     let ( capture_rank, attack ): ( usize, u64 ) = match color {
@@ -355,7 +355,7 @@ pub fn pawn_forward( pos: usize, color: u8, occupancy: u64 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
-        panic!( "A pawn cannot be on the first or the eigth rank!" );
+        return 0u64;
     }
 
     let forward_1: u64 = match color {

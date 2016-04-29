@@ -5,6 +5,7 @@ use std::default::Default;
 use std::fmt;
 use consts::*;
 use utils::*;
+use attacks::*;
 
 // A mailbox style board that encodes the contents of each square in u8
 pub type SimpleBoard = [ u8; 64 ];
