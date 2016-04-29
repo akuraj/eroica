@@ -85,4 +85,9 @@ impl Attacks {
     pub fn r_moves( &self, pos: usize, occupancy: u64 ) -> u64 {
         self.rook_attacks[ self.rook_offsets[ pos ] + magic_hash( self.rook_magics[ pos ], self.rook_masks[ pos ] & occupancy, self.rook_shifts[ pos ] ) ]
     }
+
+    pub fn q_moves( &self, pos: usize, occupancy: u64 ) -> u64 {
+        self.bishop_attacks[ self.bishop_offsets[ pos ] + magic_hash( self.bishop_magics[ pos ], self.bishop_masks[ pos ] & occupancy, self.bishop_shifts[ pos ] ) ] |
+        self.rook_attacks[ self.rook_offsets[ pos ] + magic_hash( self.rook_magics[ pos ], self.rook_masks[ pos ] & occupancy, self.rook_shifts[ pos ] ) ]
+    }
 }

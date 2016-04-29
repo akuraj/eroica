@@ -383,8 +383,16 @@ pub fn pawn_forward( pos: usize, color: u8, occupancy: u64 ) -> u64 {
     }
 }
 
-pub fn pop_lsb( x: &mut u64 ) -> usize {
+// Pops lsb and returns the position of lsb
+pub fn pop_lsb_pos( x: &mut u64 ) -> usize {
     let pos = x.trailing_zeros() as usize;
     *x &= *x - 1;
     pos
+}
+
+// Pops lsb and returns the popped number
+pub fn pop_lsb_num( x: &mut u64 ) -> u64 {
+    let num = *x & 0u64.wrapping_sub( *x );
+    *x ^= num;
+    num
 }

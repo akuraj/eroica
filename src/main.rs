@@ -39,8 +39,32 @@ use magics::*;
 use utils::*;
 use time::*;
 use attacks::*;
+use rand::{ Rng, thread_rng };
 
 fn main() {
+    let mut randoms: Vec<u64> = Vec::new();
+
+    let mut rng = thread_rng();
+    for _ in 0..100000000 {
+        randoms.push( rng.gen::<u64>() );
+    }
+
+    let t1 = precise_time_ns();
+
+    let mut x: u64;
+    let mut pos: usize;
+    let mut num: u64;
+
+    for val in &randoms {
+        x = *val;
+
+        while x != 0 {
+            num = pop_lsb_num( &mut x );
+            pos = num.trailing_zeros() as usize;
+        }
+    }
+
+    /*
     let mut att = Attacks { ..Default::default() };
     att.init( true );
 
@@ -51,17 +75,14 @@ fn main() {
 
     let occ = state.bit_board[ WHITE_ALL ] | state.bit_board[ BLACK_ALL ];
 
-    let t1 = precise_time_ns();
     let mut rmoves: u64;
-    //rmoves = att.b_moves( 37, occ );
 
     for _ in 0..100000000 {
         for pos in 0..64 {
             rmoves = att.b_moves( pos, occ );
         }
     }
-
-    //print_bb( &rmoves );
+    */
 
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
