@@ -53,10 +53,11 @@ fn main() {
 
     let t1 = precise_time_ns();
     let mut rmoves: u64;
-    
+    //rmoves = att.b_moves( 37, occ );
+
     for _ in 0..100000000 {
         for pos in 0..64 {
-            rmoves = att.r_moves( pos, occ );
+            rmoves = att.b_moves( pos, occ );
         }
     }
 
