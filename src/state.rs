@@ -57,18 +57,18 @@ pub struct Move {
     pub from: usize,
     pub to: usize,
     pub capture: u8,
+    pub promotion: u8,
 }
 
 impl Move {
     pub fn castling( &self ) -> u8 {
-        // Assumes that the moving piece is a King
-        match self.from {
-            4 => match self.to {
+        match ( self.piece, self.from ) {
+            ( WHITE_KING, 4 ) => match self.to {
                 2 => WQ_CASTLE,
                 6 => WK_CASTLE,
                 _ => 0,
             },
-            60 => match self.to {
+            ( BLACK_KING, 60 ) => match self.to {
                 58 => BQ_CASTLE,
                 62 => BK_CASTLE,
                 _ => 0,
@@ -180,8 +180,6 @@ impl State {
         while let Some( ( section_number, section ) ) = iter.next() {
             match section_number {
                 0 => {
-                    // position
-
                     // Populate simple_board
                     assert!( section.rsplit( '/' ).count() == 8, "Position should contain 8 rows:\n{}", section );
                     let mut row_iter = section.rsplit( '/' ).enumerate();

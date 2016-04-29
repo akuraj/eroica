@@ -1,4 +1,4 @@
-//! Magics
+//! Magics - for fast move generation for Bishops and Rooks
 
 use consts::*;
 use utils::*;
