@@ -42,6 +42,31 @@ use movegen::*;
 use rand::{ Rng, thread_rng };
 
 fn main() {
+    let t1 = precise_time_ns();
+    let mut mg = MoveGen { ..Default::default() };
+    mg.init( true );
+
+    //let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
+    let fen = "8/6bb/8/8/R2P2k1/4P3/P1p5/K2B4 b - d3 -";
+    let mut state = State::generate_state_from_fen( fen );
+    //let mv = Move { piece: BLACK_PAWN, from: 10, to: 3, capture: WHITE_BISHOP, promotion: BLACK_QUEEN };
+    //let irs = state.ir_state();
+    println!( "{}", state );
+    let moves = state.moves( &mg );
+    println!( "{}", moves.len() );
+
+    for mv in &moves {
+        println!( "{:?}", mv );
+    }
+
+    //println!( "{}", state );
+    //state.make( &mv );
+    //println!( "{}", state );
+    //state.unmake( &mv, &irs );
+    //println!( "{}", state );
+
+
+    /*
     let mut mg = MoveGen { ..Default::default() };
     mg.init( true );
 
@@ -56,13 +81,12 @@ fn main() {
     let mut fwd: u64;
     let cs = state.castling;
 
-    let t1 = precise_time_ns();
-    
     for _ in 0..1000000000 {
         for pos in 0..64 {
             fwd = mg.k_moves( pos, WHITE, occ, cs );
         }
     }
+    */
 
     //print_bb( &BQCR_OCC );
     let t2 = precise_time_ns();

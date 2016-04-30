@@ -5,6 +5,7 @@ use std::default::Default;
 use std::fmt;
 use consts::*;
 use utils::*;
+use movegen::*;
 
 // A mailbox style board that encodes the contents of each square in u8
 pub type SimpleBoard = [ u8; 64 ];
@@ -51,6 +52,7 @@ impl BitBoard {
 }
 
 // Move
+#[ derive( Copy, Clone, Debug ) ]
 pub struct Move {
     pub piece: u8,
     pub from: usize,
@@ -449,5 +451,119 @@ impl State {
 
         // update repetition table
         // update other blah
+    }
+
+    pub fn ep_bb( &self ) -> u64 {
+        if self.en_passant != NO_EP {
+            1u64 << self.en_passant
+        } else {
+            0u64
+        }
+    }
+
+    // All pseudo-legal moves for a given piece at a given pos, added to moves
+    pub fn add_moves_from_bb( &self, piece: u8, pos: usize, moves_bb: &mut u64, moves: &mut Vec<Move> ) {
+        let mut mv = Move { piece: piece, from: pos, to: ERR_POS, capture: EMPTY, promotion: EMPTY };
+        let mut to: usize;
+
+        if mv.is_promotion() {
+            let side = piece & COLOR;
+            while *moves_bb != 0 {
+                to = pop_lsb_pos( moves_bb );
+                mv.to = to;
+                mv.capture = self.simple_board[ to ];
+
+                mv.promotion = side | QUEEN;
+                moves.push( mv );
+                mv.promotion = side | ROOK;
+                moves.push( mv );
+                mv.promotion = side | BISHOP;
+                moves.push( mv );
+                mv.promotion = side | KNIGHT;
+                moves.push( mv );
+            }
+        } else {
+            while *moves_bb != 0 {
+                to = pop_lsb_pos( moves_bb );
+                mv.to = to;
+                mv.capture = self.simple_board[ to ];
+
+                moves.push( mv );
+            }
+        }
+    }
+
+    // All pseudo-legal moves
+    pub fn moves( &self, mg: &MoveGen ) -> Vec<Move> {
+        let side = self.to_move;
+        let opp_side = side ^ COLOR;
+
+        let friends = self.bit_board[ side | ALL ];
+        let not_friendly = !friends;
+        let enemies = self.bit_board[ opp_side | ALL ];
+        let occupancy = friends | enemies;
+        let occupancy_w_ep = occupancy | self.ep_bb();
+
+        let mut piece: u8;
+        let mut bb: u64;
+        let mut moves_bb: u64;
+        let mut pos: usize;
+        let mut moves: Vec<Move> = Vec::new();
+
+        // QUEEN
+        piece = side | QUEEN;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = mg.q_moves( pos, occupancy ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        // ROOK
+        piece = side | ROOK;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = mg.r_moves( pos, occupancy ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        // BISHOP
+        piece = side | BISHOP;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = mg.b_moves( pos, occupancy ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        // KNIGHT
+        piece = side | KNIGHT;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = mg.n_moves( pos ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        // PAWN
+        piece = side | PAWN;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = mg.p_moves( pos, side, occupancy_w_ep ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        // KING
+        piece = side | KING;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = mg.k_moves( pos, side, occupancy, self.castling ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        moves
     }
 }

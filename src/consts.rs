@@ -42,6 +42,7 @@ pub const B_CASTLE: u8 = BK_CASTLE | BQ_CASTLE;
 
 // Other
 pub const NO_EP: usize = !0usize; // Absense of EP
+pub const ERR_POS: usize = !0usize; // Error Position
 
 // BitBoard Constants
 pub const FIRST_RANK: u64 = 0x00000000000000FFu64;
