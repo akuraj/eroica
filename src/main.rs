@@ -54,16 +54,17 @@ fn main() {
     let mut pawns: u64;
     let mut pos: usize;
     let mut fwd: u64;
+    let cs = state.castling;
 
     let t1 = precise_time_ns();
-
+    
     for _ in 0..1000000000 {
         for pos in 0..64 {
-            fwd = mg.p_moves( pos, WHITE, occ );
-            fwd = mg.p_moves( pos, BLACK, occ );
+            fwd = mg.k_moves( pos, WHITE, occ, cs );
         }
     }
 
+    //print_bb( &BQCR_OCC );
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 

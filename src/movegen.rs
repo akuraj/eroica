@@ -89,8 +89,34 @@ impl MoveGen {
         self.knight_attacks[ pos ]
     }
 
-    pub fn k_moves( &self, pos: usize ) -> u64 {
-        self.king_attacks[ pos ]
+    pub fn k_moves( &self, pos: usize, color: u8, occupancy: u64, castling: u8 ) -> u64 {
+        let mut moves = self.king_attacks[ pos ];
+
+        match ( color, pos ) {
+            ( WHITE, 4 ) => {
+                if ( castling & WK_CASTLE != 0 ) && ( occupancy & WKCR_OCC == 0 ) {
+                    moves |= WK_CASTLE_BB;
+                }
+
+                if ( castling & WQ_CASTLE != 0 ) && ( occupancy & WQCR_OCC == 0 ) {
+                    moves |= WQ_CASTLE_BB;
+                }
+
+                moves
+            },
+            ( BLACK, 60 ) => {
+                if ( castling & BK_CASTLE != 0 ) && ( occupancy & BKCR_OCC == 0 ) {
+                    moves |= BK_CASTLE_BB;
+                }
+
+                if ( castling & BQ_CASTLE != 0 ) && ( occupancy & BQCR_OCC == 0 ) {
+                    moves |= BQ_CASTLE_BB;
+                }
+
+                moves
+            },
+            _ => moves,
+        }
     }
 
     pub fn p_moves( &self, pos: usize, color: u8, occupancy: u64 ) -> u64 {
