@@ -92,4 +92,8 @@ impl Attacks {
     pub fn k_moves( &self, pos: usize ) -> u64 {
         self.king_attacks[ pos ]
     }
+
+    pub fn p_moves( &self, pos: usize, color: u8, occupancy: u64 ) -> u64 {
+        pawn_attack( pos, color, occupancy )
+    }
 }

@@ -334,6 +334,7 @@ pub fn king_attack( pos: usize ) -> u64 {
 }
 
 pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
+    // Occupancy should also include ep_passant, if any
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
