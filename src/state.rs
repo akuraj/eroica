@@ -715,8 +715,43 @@ impl State {
         // ep pins - the special stuff
         if self.en_passant != NO_EP {
             let mut ep_killers = self.bit_board[ side | PAWN ] & self.mg.p_captures( self.en_passant, opp_side );
-            while ep_killers != 0 {
-                
+            if ep_killers != 0 {
+                let ep_target: usize = match side {
+                    WHITE => self.en_passant - 8,
+                    BLACK => self.en_passant + 8,
+                    _ => panic!( "Invalid color!" ),
+                };
+
+                // Check if ep_target is diagonally pinned to our king
+                let mut ep_diag_pin = false;
+                possibly_pinned = self.mg.b_moves( king_pos, occupancy ) & ( 1u64 << ep_target );
+                if possibly_pinned != 0 {
+                    pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] );
+                    if pinners != 0 { ep_diag_pin = true; }
+                }
+
+                while ep_killers != 0 {
+                    pinned_pos = pop_lsb_pos( &mut ep_killers );
+
+                    if ep_diag_pin {
+                        self.a_pins[ pinned_pos ] = match self.a_pins[ pinned_pos ] == ERR_POS {
+                            true => EP_PIN,
+                            false => self.a_pins[ pinned_pos ] | EP_PIN,
+                        };
+                    } else {
+                        // Check if both pawns are horizontally pinned to our king
+                        let ep_clear: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target );
+                        r_attacks = self.mg.r_moves( king_pos, occupancy ^ ep_clear );
+                        if r_attacks & ep_clear == ep_clear {
+                            if r_attacks & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) != 0 {
+                                self.a_pins[ pinned_pos ] = match self.a_pins[ pinned_pos ] == ERR_POS {
+                                    true => EP_PIN,
+                                    false => self.a_pins[ pinned_pos ] | EP_PIN,
+                                };
+                            }
+                        }
+                    }
+                }
             }
         }
     }
