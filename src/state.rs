@@ -621,7 +621,6 @@ impl State {
         let enemies = self.bit_board[ opp_side | ALL ];
         let occupancy = friends | enemies;
 
-        let mut piece: u8;
         let mut bb: u64;
         let mut pos: usize;
         let mut o_attacks: u64;
@@ -630,27 +629,8 @@ impl State {
 
         /**** Checks and Attacked ****/
 
-        // QUEEN
-        piece = opp_side | QUEEN;
-        bb = self.bit_board[ piece ];
-        while bb != 0 {
-            pos = pop_lsb_pos( &mut bb );
-            b_attacks = self.mg.b_moves( pos, occupancy );
-            r_attacks = self.mg.r_moves( pos, occupancy );
-            self.attacked |= b_attacks | r_attacks;
-
-            if b_attacks & king != 0 {
-                self.num_checks += 1;
-                self.checks |= line_of_attack( king_pos, pos, b_attacks );
-            } else if r_attacks & king != 0 {
-                self.num_checks += 1;
-                self.checks |= line_of_attack( king_pos, pos, r_attacks );
-            }
-        }
-
-        // ROOK
-        piece = opp_side | ROOK;
-        bb = self.bit_board[ piece ];
+        // ROOK & QUEEN - orthogonal attacks
+        bb = self.bit_board[ opp_side | ROOK ] | self.bit_board[ opp_side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
             r_attacks = self.mg.r_moves( pos, occupancy );
@@ -662,9 +642,8 @@ impl State {
             }
         }
 
-        // BISHOP
-        piece = opp_side | BISHOP;
-        bb = self.bit_board[ piece ];
+        // BISHOP & QUEEN - diagonal attacks
+        bb = self.bit_board[ opp_side | BISHOP ] | self.bit_board[ opp_side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
             b_attacks = self.mg.b_moves( pos, occupancy );
@@ -677,8 +656,7 @@ impl State {
         }
 
         // KNIGHT
-        piece = opp_side | KNIGHT;
-        bb = self.bit_board[ piece ];
+        bb = self.bit_board[ opp_side | KNIGHT ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
             o_attacks = self.mg.n_moves( pos );
@@ -689,10 +667,9 @@ impl State {
                 self.checks |= 1u64 << pos;
             }
         }
-
+        
         // PAWN
-        piece = opp_side | PAWN;
-        bb = self.bit_board[ piece ];
+        bb = self.bit_board[ opp_side | PAWN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
             o_attacks = self.mg.p_captures( pos, opp_side );
@@ -705,8 +682,7 @@ impl State {
         }
 
         // KING
-        piece = opp_side | KING;
-        bb = self.bit_board[ piece ];
+        bb = self.bit_board[ opp_side | KING ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
             o_attacks = self.mg.k_captures( pos );
