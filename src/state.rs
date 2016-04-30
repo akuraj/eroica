@@ -84,6 +84,10 @@ impl Move {
             _ => false,
         }
     }
+
+    pub fn is_ep( &self, en_passant: usize ) -> bool {
+        ( self.piece & PAWN != 0 ) && ( self.to == en_passant )
+    }
 }
 
 // Irreversible State
@@ -91,6 +95,12 @@ pub struct IRState {
     pub castling: u8,
     pub en_passant: usize, // Store the pos (square address)
     pub halfmove_clock: u8,
+
+    // Expense stuff to recalc
+    pub attacked: u64,
+    pub num_checks: u8,
+    pub checks: u64,
+    pub a_pins: [ usize; 64 ],
 }
 
 // Full state
@@ -109,6 +119,7 @@ pub struct State {
     pub num_checks: u8,
     pub checks: u64,
     pub a_pins: [ usize; 64 ],
+
     // repetition table
     // hash
     // other bb items
@@ -272,13 +283,21 @@ impl State {
             }
         }
 
+        state.compute_attacked();
+
         // FIXME: Implement a state check
 
         state
     }
 
     pub fn ir_state( &self ) -> IRState {
-        IRState{ castling: self.castling, en_passant: self.en_passant, halfmove_clock: self.halfmove_clock }
+        IRState{ castling: self.castling,
+                 en_passant: self.en_passant,
+                 halfmove_clock: self.halfmove_clock,
+                 attacked: self.attacked,
+                 num_checks: self.num_checks,
+                 checks: self.checks,
+                 a_pins: self.a_pins, }
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -385,6 +404,8 @@ impl State {
         if side == BLACK { self.fullmove_count += 1; } // update fullmove_count
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
+        self.compute_attacked();
+
         // update repetition table
         // update other blah
     }
@@ -455,6 +476,10 @@ impl State {
         self.castling = irs.castling;
         self.en_passant = irs.en_passant;
         self.halfmove_clock = irs.halfmove_clock;
+        self.attacked = irs.attacked;
+        self.num_checks = irs.num_checks;
+        self.checks = irs.checks;
+        self.a_pins = irs.a_pins;
 
         self.bit_board.set_all(); // update 'ALL' bit_boards
         self.to_move ^= COLOR; // set side
@@ -754,5 +779,9 @@ impl State {
                 }
             }
         }
+    }
+
+    pub fn is_legal( &self, mv: &Move ) -> bool {
+        false
     }
 }
