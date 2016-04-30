@@ -75,6 +75,13 @@ impl Move {
             _ => 0,
         }
     }
+
+    pub fn is_promotion( &self ) -> bool {
+        match ( self.piece, self.from / 8 ) {
+            ( WHITE_PAWN, 6 ) | ( BLACK_PAWN, 1 ) => true,
+            _ => false,
+        }
+    }
 }
 
 // Irreversible State
@@ -270,20 +277,25 @@ impl State {
         self.bit_board[ mv.piece ] ^= ( 1u64 << mv.from ) | ( 1u64 << mv.to );
         if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
 
-        // Update castling state and en_passant
+        // Update castling state and en_passant; handle promotion
         // Update simple_board and bit_board for Rook if castling
         let mut new_ep = NO_EP;
         match mv.piece {
             WHITE_PAWN => {
-                match mv.to - mv.from {
-                    8 => {}, // forward_1, nothing to do
-                    16 => { new_ep = mv.from + 8; }, // forward_2, set en_passant capture
-                    _ => {
-                        if self.en_passant == mv.to {
-                            self.simple_board[ mv.to - 8 ] = EMPTY;
-                            self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
-                        }
-                    },
+                if mv.is_promotion() {
+                    self.simple_board[ mv.to ] = mv.promotion;
+                    self.bit_board[ WHITE_PAWN ] ^= 1u64 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                } else {
+                    match mv.to - mv.from {
+                        16 => { new_ep = mv.from + 8; }, // forward_2, set en_passant capture
+                        _ => {
+                            if self.en_passant == mv.to {
+                                self.simple_board[ mv.to - 8 ] = EMPTY;
+                                self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
+                            }
+                        },
+                    }
                 }
             },
             WHITE_KING => {
@@ -311,15 +323,20 @@ impl State {
                 }
             },
             BLACK_PAWN => {
-                match mv.from - mv.to {
-                    8 => {}, // forward_1, nothing to do
-                    16 => { new_ep = mv.to + 8; }, // forward_2, set en_passant capture
-                    _ => {
-                        if self.en_passant == mv.to {
-                            self.simple_board[ mv.to + 8 ] = EMPTY;
-                            self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
-                        }
-                    },
+                if mv.is_promotion() {
+                    self.simple_board[ mv.to ] = mv.promotion;
+                    self.bit_board[ BLACK_PAWN ] ^= 1u64 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                } else {
+                    match mv.from - mv.to {
+                        16 => { new_ep = mv.to + 8; }, // forward_2, set en_passant capture
+                        _ => {
+                            if self.en_passant == mv.to {
+                                self.simple_board[ mv.to + 8 ] = EMPTY;
+                                self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
+                            }
+                        },
+                    }
                 }
             },
             BLACK_KING => {
@@ -371,7 +388,10 @@ impl State {
         // Undo castling and en_passant
         match mv.piece {
             WHITE_PAWN => {
-                if irs.en_passant == mv.to {
+                if mv.is_promotion() {
+                    self.bit_board[ WHITE_PAWN ] ^= 1u64 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                } else if irs.en_passant == mv.to {
                     self.simple_board[ mv.to - 8 ] = BLACK_PAWN;
                     self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
                 }
@@ -392,7 +412,10 @@ impl State {
                 }
             },
             BLACK_PAWN => {
-                if irs.en_passant == mv.to {
+                if mv.is_promotion() {
+                    self.bit_board[ BLACK_PAWN ] ^= 1u64 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                } else if irs.en_passant == mv.to {
                     self.simple_board[ mv.to + 8 ] = WHITE_PAWN;
                     self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
                 }
