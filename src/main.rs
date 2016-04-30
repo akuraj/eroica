@@ -31,21 +31,19 @@ pub mod consts;
 pub mod state;
 pub mod utils;
 pub mod magics;
-pub mod attacks;
+pub mod movegen;
 
 use consts::*;
 use state::*;
 use magics::*;
 use utils::*;
 use time::*;
-use attacks::*;
+use movegen::*;
 use rand::{ Rng, thread_rng };
 
 fn main() {
-    let mut att = Attacks { ..Default::default() };
-    att.init( true );
-
-    let t1 = precise_time_ns();
+    let mut mg = MoveGen { ..Default::default() };
+    mg.init( true );
 
     let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
     let state = State::generate_state_from_fen( fen );
@@ -57,22 +55,18 @@ fn main() {
     let mut pos: usize;
     let mut fwd: u64;
 
-    for _ in 0..1000000000 {
-        pawns = state.bit_board[ WHITE_PAWN ];
-        while pawns != 0 {
-            pos = pop_lsb_pos( &mut pawns );
-            fwd = pawn_attack( pos, WHITE, occ );
-        }
+    let t1 = precise_time_ns();
 
-        pawns = state.bit_board[ BLACK_PAWN ];
-        while pawns != 0 {
-            pos = pop_lsb_pos( &mut pawns );
-            fwd = pawn_attack( pos, BLACK, occ );
+    for _ in 0..1000000000 {
+        for pos in 0..64 {
+            fwd = mg.p_moves( pos, WHITE, occ );
+            fwd = mg.p_moves( pos, BLACK, occ );
         }
     }
 
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+
 
 
     /*

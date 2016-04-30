@@ -1,4 +1,4 @@
-//! Attacks - defines an interface that provides functions to get the possible attacks/moves of pieces
+//! MoveGen - defines an interface that provides functions to get the possible attacks/moves of pieces
 //! Stores attacks for non-sliding pieces, uses magics to compute attacks for sliding pieces
 
 use std::default::Default;
@@ -6,7 +6,7 @@ use consts::*;
 use utils::*;
 use magics::*;
 
-pub struct Attacks {
+pub struct MoveGen {
     pub knight_attacks: [ u64; 64 ],
     pub king_attacks: [ u64; 64 ],
 
@@ -23,9 +23,9 @@ pub struct Attacks {
     pub rook_attacks: Vec<u64>,
 }
 
-impl Default for Attacks {
+impl Default for MoveGen {
     fn default() -> Self {
-        Attacks { knight_attacks: [ 0u64; 64 ],
+        MoveGen { knight_attacks: [ 0u64; 64 ],
                   king_attacks: [ 0u64; 64 ],
                   bishop_masks: [ 0u64; 64 ],
                   bishop_shifts: [ 0u8; 64 ],
@@ -40,7 +40,7 @@ impl Default for Attacks {
     }
 }
 
-impl Attacks {
+impl MoveGen {
     pub fn init( &mut self, stored: bool ) {
         self.bishop_shifts = BISHOP_SHIFTS;
         self.rook_shifts = ROOK_SHIFTS;
