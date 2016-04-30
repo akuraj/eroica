@@ -368,6 +368,22 @@ pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
     }
 }
 
+pub fn pawn_capture( pos: usize, color: u8 ) -> u64 {
+    let ( _i, j ) = file_rank( pos );
+
+    if j == 0 || j == 7 {
+        return 0u64;
+    }
+
+    let ( capture_rank, attack ): ( usize, u64 ) = match color {
+        WHITE => ( j + 1, PCP_W_A2 << ( pos - 8 ) ),
+        BLACK => ( j - 1, PCP_B_H7 >> ( 55 - pos ) ),
+        _ => panic!( "Invalid color!" ),
+    };
+
+    attack & ( FIRST_RANK << ( 8 * capture_rank ) )
+}
+
 // Pops lsb and returns the position of lsb
 pub fn pop_lsb_pos( x: &mut u64 ) -> usize {
     let pos = x.trailing_zeros() as usize;
@@ -380,4 +396,36 @@ pub fn pop_lsb_num( x: &mut u64 ) -> u64 {
     let num = *x & 0u64.wrapping_sub( *x );
     *x ^= num;
     num
+}
+
+// Returns the line passing through pos1 and pos2
+pub fn line( pos1: usize, pos2: usize ) -> u64 {
+    let ( i1, j1 ) = file_rank( pos1 );
+    let ( i2, j2 ) = file_rank( pos2 );
+
+    if i1 == i2 {
+        return A_FILE << i1;
+    } else if j1 == j2 {
+        return FIRST_RANK << ( j1 * 8 );
+    } else if i1 + j2 == i2 + j1 {
+        if i1 > j1 {
+            A1_H8 >> ( 8 * ( i1 - j1 ) )
+        } else {
+            A1_H8 << ( 8 * ( j1 - i1 ) )
+        }
+    } else if i1 + j1 == i2 + j2 {
+        let s = i1 + j1;
+        if s > 7 {
+            A8_H1 << ( 8 * s - 56 )
+        } else {
+            A8_H1 >> ( 56 - 8 * s )
+        }
+    } else {
+        0u64
+    }
+}
+
+// All the squares that I can send a piece to, to block the check
+pub fn line_of_attack( king_pos: usize, pos: usize, attacks: u64 ) -> u64 {
+    ( line( king_pos, pos ) & attacks ) ^ ( ( 1u64 << king_pos ) | ( 1u64 << pos ) )
 }

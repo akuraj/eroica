@@ -43,146 +43,28 @@ use rand::{ Rng, thread_rng };
 
 fn main() {
     let t1 = precise_time_ns();
-    let mut mg = MoveGen { ..Default::default() };
-    mg.init( true );
-
-    //let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
-    let fen = "8/6bb/8/8/R2P2k1/4P3/P1p5/K2B4 b - d3 -";
+    /*
+    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
+    //let fen = "8/6bb/8/8/R2P2k1/4P3/P1p5/K2B4 b - d3 -";
     let mut state = State::generate_state_from_fen( fen );
     //let mv = Move { piece: BLACK_PAWN, from: 10, to: 3, capture: WHITE_BISHOP, promotion: BLACK_QUEEN };
     //let irs = state.ir_state();
-    println!( "{}", state );
-    let moves = state.moves( &mg );
-    println!( "{}", moves.len() );
+    let mut moves: Vec<Move> = Vec::new();
 
-    for mv in &moves {
-        println!( "{:?}", mv );
-    }
+    let loop_size: usize = 10000000;
 
-    //println!( "{}", state );
-    //state.make( &mv );
-    //println!( "{}", state );
-    //state.unmake( &mv, &irs );
-    //println!( "{}", state );
-
-
-    /*
-    let mut mg = MoveGen { ..Default::default() };
-    mg.init( true );
-
-    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
-    let state = State::generate_state_from_fen( fen );
-    println!( "{}", state );
-
-    let occ = state.bit_board[ WHITE_ALL ] | state.bit_board[ BLACK_ALL ];
-
-    let mut pawns: u64;
-    let mut pos: usize;
-    let mut fwd: u64;
-    let cs = state.castling;
-
-    for _ in 0..1000000000 {
-        for pos in 0..64 {
-            fwd = mg.k_moves( pos, WHITE, occ, cs );
-        }
+    for i in 0..loop_size {
+        moves = state.moves();
     }
     */
 
-    //print_bb( &BQCR_OCC );
+    let l = line( 44, 35 );
+    print_bb( &l );
+
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+    //println!( "Speed: {} MNPS", ( ( loop_size as f32 * moves.len() as f32 ) / ( ( ( t2 - t1 ) as f32 ) / 1e9 ) ) / 1e6 );
 
-
-
-    /*
-    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
-    let state = State::generate_state_from_fen( fen );
-    println!( "{}", state );
-
-    let occ = state.bit_board[ WHITE_ALL ] | state.bit_board[ BLACK_ALL ];
-
-    let mut pawns: u64;
-    let mut pos: usize;
-    let mut fwd: u64;
-
-    for _ in 0..1000000000 {
-        pawns = state.bit_board[ WHITE_PAWN ];
-        while pawns != 0 {
-            pos = pop_lsb_pos( &mut pawns );
-            fwd = pawn_forward( pos, WHITE, occ );
-        }
-
-        pawns = state.bit_board[ BLACK_PAWN ];
-        while pawns != 0 {
-            pos = pop_lsb_pos( &mut pawns );
-            fwd = pawn_forward( pos, BLACK, occ );
-        }
-    }
-    */
-
-
-
-    /*
-    let mut randoms: Vec<u64> = Vec::new();
-
-    let mut rng = thread_rng();
-    for _ in 0..100000000 {
-        randoms.push( rng.gen::<u64>() );
-    }
-
-    let mut x: u64;
-    let mut pos: usize;
-    let mut num: u64;
-
-    for val in &randoms {
-        x = *val;
-
-        while x != 0 {
-            num = pop_lsb_num( &mut x );
-            pos = num.trailing_zeros() as usize;
-        }
-    }
-    */
-
-    /*
-    let mut att = Attacks { ..Default::default() };
-    att.init( true );
-
-    let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
-    //let fen = "8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 -";
-    let mut state = State::generate_state_from_fen( fen );
-    println!( "{}", state );
-
-    let occ = state.bit_board[ WHITE_ALL ] | state.bit_board[ BLACK_ALL ];
-
-    let mut rmoves: u64;
-
-    for _ in 0..100000000 {
-        for pos in 0..64 {
-            rmoves = att.b_moves( pos, occ );
-        }
-    }
-    */
-
-    /*
     //let fen = "rn1q1rk1/p4pbp/bp1p1np1/2pP4/8/P1N2NP1/1PQ1PPBP/R1B1K2R w KQ - -";
-    let fen = "8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 -";
-    let mut state = State::generate_state_from_fen( fen );
-    let mv = Move { piece: BLACK_KING, from: 30, to: 21, capture: EMPTY };
-    let irs = state.ir_state();
-
-    for i in 0..1000000000 {
-        state.make( &mv );
-        state.unmake( &mv, &irs );
-    }
-    */
-
-    /*
-    let mv = Move { piece: WHITE_KING, from: 4, to: 6, capture: EMPTY };
-    let irs = state.ir_state();
-    state.make( &mv );
-    println!( "{}", state );
-    state.unmake( &mv, &irs );
-    println!( "{}", state );
-    */
+    //let fen = "8/6bb/8/8/R2P2k1/4P3/P1p5/K2B4 b - d3 -";
 }

@@ -103,6 +103,12 @@ pub struct State {
     pub halfmove_clock: u8,
     pub fullmove_count: u8,
 
+    pub mg: MoveGen,
+
+    pub attacked: u64,
+    pub num_checks: u8,
+    pub checks: u64,
+    pub a_pins: [ usize; 64 ],
     // repetition table
     // hash
     // other bb items
@@ -116,7 +122,12 @@ impl Default for State {
                 castling: 0,
                 en_passant: NO_EP,
                 halfmove_clock: 0,
-                fullmove_count: 0, }
+                fullmove_count: 0,
+                mg: MoveGen { ..Default::default() },
+                attacked: 0,
+                num_checks: 0,
+                checks: 0,
+                a_pins: [ 0; 64 ], }
     }
 }
 
@@ -494,14 +505,12 @@ impl State {
     }
 
     // All pseudo-legal moves
-    pub fn moves( &self, mg: &MoveGen ) -> Vec<Move> {
+    pub fn moves( &self ) -> Vec<Move> {
         let side = self.to_move;
         let opp_side = side ^ COLOR;
 
-        let friends = self.bit_board[ side | ALL ];
-        let not_friendly = !friends;
-        let enemies = self.bit_board[ opp_side | ALL ];
-        let occupancy = friends | enemies;
+        let not_friendly = !self.bit_board[ side | ALL ];
+        let occupancy = self.bit_board[ side | ALL ] | self.bit_board[ opp_side | ALL ];
         let occupancy_w_ep = occupancy | self.ep_bb();
 
         let mut piece: u8;
@@ -515,7 +524,7 @@ impl State {
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = mg.q_moves( pos, occupancy ) & not_friendly;
+            moves_bb = self.mg.q_moves( pos, occupancy ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
@@ -524,7 +533,7 @@ impl State {
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = mg.r_moves( pos, occupancy ) & not_friendly;
+            moves_bb = self.mg.r_moves( pos, occupancy ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
@@ -533,7 +542,7 @@ impl State {
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = mg.b_moves( pos, occupancy ) & not_friendly;
+            moves_bb = self.mg.b_moves( pos, occupancy ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
@@ -542,7 +551,7 @@ impl State {
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = mg.n_moves( pos ) & not_friendly;
+            moves_bb = self.mg.n_moves( pos ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
@@ -551,7 +560,7 @@ impl State {
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = mg.p_moves( pos, side, occupancy_w_ep ) & not_friendly;
+            moves_bb = self.mg.p_moves( pos, side, occupancy_w_ep ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
@@ -560,10 +569,155 @@ impl State {
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = mg.k_moves( pos, side, occupancy, self.castling ) & not_friendly;
+            moves_bb = self.mg.k_moves( pos, side, occupancy, self.castling ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
         moves
+    }
+
+    pub fn compute_attacked( &mut self ) {
+        // Computes the following
+        // attacked: all the squares attacked by enemies (including enemy pieces, which are 'defended')
+        // num_checks
+        // checks: all the squares that I can send a piece to, to block check
+        // a_pins: absolute pins
+
+        self.attacked = 0;
+        self.num_checks = 0;
+        self.checks = 0;
+        self.a_pins = [ ERR_POS; 64 ];
+
+        let side = self.to_move;
+        let opp_side = side ^ COLOR;
+        let king = self.bit_board[ side | KING ];
+        let king_pos = king.trailing_zeros() as usize;
+        let friends = self.bit_board[ side | ALL ];
+        let enemies = self.bit_board[ opp_side | ALL ];
+        let occupancy = friends | enemies;
+
+        let mut piece: u8;
+        let mut bb: u64;
+        let mut pos: usize;
+        let mut o_attacks: u64;
+        let mut r_attacks: u64;
+        let mut b_attacks: u64;
+
+        /**** Checks and Attacked ****/
+
+        // QUEEN
+        piece = opp_side | QUEEN;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            b_attacks = self.mg.b_moves( pos, occupancy );
+            r_attacks = self.mg.r_moves( pos, occupancy );
+            self.attacked |= b_attacks | r_attacks;
+
+            if b_attacks & king != 0 {
+                self.num_checks += 1;
+                self.checks |= line_of_attack( king_pos, pos, b_attacks );
+            } else if r_attacks & king != 0 {
+                self.num_checks += 1;
+                self.checks |= line_of_attack( king_pos, pos, r_attacks );
+            }
+        }
+
+        // ROOK
+        piece = opp_side | ROOK;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            r_attacks = self.mg.r_moves( pos, occupancy );
+            self.attacked |= r_attacks;
+
+            if r_attacks & king != 0 {
+                self.num_checks += 1;
+                self.checks |= line_of_attack( king_pos, pos, r_attacks );
+            }
+        }
+
+        // BISHOP
+        piece = opp_side | BISHOP;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            b_attacks = self.mg.b_moves( pos, occupancy );
+            self.attacked |= b_attacks;
+
+            if b_attacks & king != 0 {
+                self.num_checks += 1;
+                self.checks |= line_of_attack( king_pos, pos, b_attacks );
+            }
+        }
+
+        // KNIGHT
+        piece = opp_side | KNIGHT;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.n_moves( pos );
+            self.attacked |= o_attacks;
+
+            if o_attacks & king != 0 {
+                self.num_checks += 1;
+                self.checks |= 1u64 << pos;
+            }
+        }
+
+        // PAWN
+        piece = opp_side | PAWN;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.p_captures( pos, opp_side );
+            self.attacked |= o_attacks;
+
+            if o_attacks & king != 0 {
+                self.num_checks += 1;
+                self.checks |= 1u64 << pos;
+            }
+        }
+
+        // KING
+        piece = opp_side | KING;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.k_captures( pos );
+            self.attacked |= o_attacks;
+        }
+
+        /**** Pins ****/
+
+        let mut possibly_pinned: u64;
+        let mut pinners: u64;
+        let mut pinned_pos: usize;
+
+        // Diagonal pins
+        possibly_pinned = self.mg.b_moves( king_pos, occupancy ) & friends;
+        pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] );
+        while pinners != 0 {
+            pos = pop_lsb_pos( &mut pinners );
+            pinned_pos = ( possibly_pinned & line( king_pos, pos ) ).trailing_zeros() as usize;
+            self.a_pins[ pinned_pos ] = pos;
+        }
+
+        // Orthogonal pins
+        possibly_pinned = self.mg.r_moves( king_pos, occupancy ) & friends;
+        pinners = self.mg.r_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] );
+        while pinners != 0 {
+            pos = pop_lsb_pos( &mut pinners );
+            pinned_pos = ( possibly_pinned & line( king_pos, pos ) ).trailing_zeros() as usize;
+            self.a_pins[ pinned_pos ] = pos;
+        }
+
+        // ep pins - the special stuff
+        if self.en_passant != NO_EP {
+            let mut ep_killers = self.bit_board[ side | PAWN ] & self.mg.p_captures( self.en_passant, opp_side );
+            while ep_killers != 0 {
+                
+            }
+        }
     }
 }

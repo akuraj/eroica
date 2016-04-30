@@ -25,18 +25,22 @@ pub struct MoveGen {
 
 impl Default for MoveGen {
     fn default() -> Self {
-        MoveGen { knight_attacks: [ 0u64; 64 ],
-                  king_attacks: [ 0u64; 64 ],
-                  bishop_masks: [ 0u64; 64 ],
-                  bishop_shifts: [ 0u8; 64 ],
-                  bishop_magics: [ 0u64; 64 ],
-                  bishop_offsets: [ 0usize; 64 ],
-                  bishop_attacks: Vec::new(),
-                  rook_masks: [ 0u64; 64 ],
-                  rook_shifts: [ 0u8; 64 ],
-                  rook_magics: [ 0u64; 64 ],
-                  rook_offsets: [ 0usize; 64 ],
-                  rook_attacks: Vec::new(), }
+        let mut mg = MoveGen { knight_attacks: [ 0u64; 64 ],
+                               king_attacks: [ 0u64; 64 ],
+                               bishop_masks: [ 0u64; 64 ],
+                               bishop_shifts: [ 0u8; 64 ],
+                               bishop_magics: [ 0u64; 64 ],
+                               bishop_offsets: [ 0usize; 64 ],
+                               bishop_attacks: Vec::new(),
+                               rook_masks: [ 0u64; 64 ],
+                               rook_shifts: [ 0u8; 64 ],
+                               rook_magics: [ 0u64; 64 ],
+                               rook_offsets: [ 0usize; 64 ],
+                               rook_attacks: Vec::new(), };
+
+        mg.init( true );
+
+        mg
     }
 }
 
@@ -119,7 +123,15 @@ impl MoveGen {
         }
     }
 
+    pub fn k_captures( &self, pos: usize ) -> u64 {
+        self.king_attacks[ pos ]
+    }
+
     pub fn p_moves( &self, pos: usize, color: u8, occupancy: u64 ) -> u64 {
         pawn_attack( pos, color, occupancy )
+    }
+
+    pub fn p_captures( &self, pos: usize, color: u8 ) -> u64 {
+        pawn_capture( pos, color )
     }
 }
