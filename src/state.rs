@@ -107,12 +107,26 @@ impl Move {
 }
 
 // Game status enum
-#[ derive( Clone, Debug ) ]
+#[ derive( Copy, Clone, Debug, PartialEq ) ]
 pub enum Status {
     Unknown,
-    Ongoing{ legal_moves: Vec<Move> },
-    Checkmake,
+    Ongoing,
+    Checkmate,
     Stalemate
+}
+
+// NodeInfo
+#[ derive( Clone, Debug ) ]
+pub struct NodeInfo {
+    pub status: Status,
+    pub legal_moves: Vec<Move>,
+}
+
+impl Default for NodeInfo {
+    fn default() -> Self {
+        NodeInfo { status: Status::Unknown,
+                   legal_moves: Vec::new() }
+    }
 }
 
 // Irreversible State - and also attack and defend info - which is expensive to recalc
@@ -126,7 +140,7 @@ pub struct IRState {
     pub num_checks: u8,
     pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
-    pub status: Status,
+    pub node_info: NodeInfo,
 }
 
 // Full state
@@ -146,7 +160,7 @@ pub struct State {
     pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
 
-    pub status: Status,
+    pub node_info: NodeInfo,
     // repetition table
     // hash
     // other bb items
@@ -166,7 +180,7 @@ impl Default for State {
                 num_checks: 0,
                 check_blocker: FULL_BOARD,
                 a_pins: [ FULL_BOARD; 64 ],
-                status: Status::Unknown, }
+                node_info: NodeInfo { ..Default::default() }, }
     }
 }
 
@@ -312,7 +326,7 @@ impl State {
         }
 
         state.update_ad();
-        state.status = Status::Unknown;
+        state.node_info = NodeInfo { ..Default::default() };
 
         // FIXME: Implement a state check
 
@@ -327,7 +341,7 @@ impl State {
                  num_checks: self.num_checks,
                  check_blocker: self.check_blocker,
                  a_pins: self.a_pins,
-                 status: self.status.clone() }
+                 node_info: self.node_info.clone() }
     }
 
     pub fn set_ir_state( &mut self, irs: &IRState ) {
@@ -338,7 +352,7 @@ impl State {
         self.num_checks = irs.num_checks;
         self.check_blocker = irs.check_blocker;
         self.a_pins = irs.a_pins;
-        self.status = irs.status.clone();
+        self.node_info = irs.node_info.clone();
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -446,7 +460,7 @@ impl State {
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
         self.update_ad();
-        self.status = Status::Unknown;
+        self.node_info = NodeInfo { ..Default::default() };
 
         // update repetition table
         // update other blah
@@ -810,6 +824,28 @@ impl State {
         }
     }
 
-    pub fn update_status( &mut self ) {
+    pub fn update_node_info( &mut self ) {
+        if self.node_info.status == Status::Unknown {
+            let moves = self.moves();
+            let mut legal_moves: Vec<Move> = Vec::new();
+            for mv in &moves {
+                if self.is_legal( mv ) {
+                    legal_moves.push( *mv );
+                }
+            }
+
+            self.node_info.status = match ( legal_moves.len() == 0, self.num_checks > 0 ) {
+                ( false, _ ) => Status::Ongoing,
+                ( true, false ) => Status::Stalemate,
+                ( true, true ) => Status::Checkmate,
+            };
+
+            self.node_info.legal_moves = legal_moves;
+        }
+    }
+
+    pub fn legal_moves( &mut self ) -> Vec<Move> {
+        self.update_node_info();
+        self.node_info.legal_moves.clone()
     }
 }
