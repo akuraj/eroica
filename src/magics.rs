@@ -48,12 +48,12 @@ pub fn magic_hash( magic: u64, occupancy: u64, shift: u8 ) -> usize {
 
 // Checks if the guess is a magic, and returns the hashed attacks if it is
 pub fn hashed_attacks( guess: u64, occupancies: &[ u64 ], attacks: &[ u64 ], shift: u8 ) -> Option<Vec<u64>> {
-    let mut hashed_attacks: Vec<u64> = vec![ 0u64; occupancies.len() ];
+    let mut hashed_attacks: Vec<u64> = vec![ 0; occupancies.len() ];
     let mut hash: usize;
 
     for ( i, occupancy ) in occupancies.iter().enumerate() {
         hash = magic_hash( guess, *occupancy, shift );
-        if hashed_attacks[ hash ] == 0u64 {
+        if hashed_attacks[ hash ] == 0 {
             hashed_attacks[ hash ] = attacks[ i ];
         } else if hashed_attacks[ hash ] != attacks[ i ] {
             return None;

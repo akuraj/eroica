@@ -181,7 +181,7 @@ pub fn rook_attack( pos: usize, occupancy: u64 ) -> u64 {
     let mut rank_iter: usize;
     let mut pos_iter: usize;
 
-    let mut attack: u64 = 0u64;
+    let mut attack: u64 = 0;
 
     // North
     rank_iter = j;
@@ -237,7 +237,7 @@ pub fn bishop_attack( pos: usize, occupancy: u64 ) -> u64 {
     let mut rank_iter: usize;
     let mut pos_iter: usize;
 
-    let mut attack: u64 = 0u64;
+    let mut attack: u64 = 0;
 
     // NE
     file_iter = i;
@@ -305,7 +305,7 @@ pub fn influence( pos: usize, size: usize ) -> u64 {
         ( false, false ) => panic!( "You're trying to influence too much - just stop!" ),
     };
 
-    let mut influence_file: u64 = 0u64;
+    let mut influence_file: u64 = 0;
     let mut iter = cmp::max( i, size ) - size;
     let mut file = A_FILE << iter;
     let end = cmp::min( i + size, 7 );
@@ -338,7 +338,7 @@ pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
-        return 0u64;
+        return 0;
     }
 
     let ( capture_rank, mut attack, forward_1 ): ( usize, u64, u64 ) = match color {
@@ -372,7 +372,7 @@ pub fn pawn_capture( pos: usize, color: u8 ) -> u64 {
     let ( _i, j ) = file_rank( pos );
 
     if j == 0 || j == 7 {
-        return 0u64;
+        return 0;
     }
 
     let ( capture_rank, attack ): ( usize, u64 ) = match color {
@@ -421,7 +421,7 @@ pub fn line( pos1: usize, pos2: usize ) -> u64 {
             A8_H1 >> ( 56 - 8 * s )
         }
     } else {
-        0u64
+        0
     }
 }
 

@@ -25,17 +25,17 @@ pub struct MoveGen {
 
 impl Default for MoveGen {
     fn default() -> Self {
-        let mut mg = MoveGen { knight_attacks: [ 0u64; 64 ],
-                               king_attacks: [ 0u64; 64 ],
-                               bishop_masks: [ 0u64; 64 ],
-                               bishop_shifts: [ 0u8; 64 ],
-                               bishop_magics: [ 0u64; 64 ],
-                               bishop_offsets: [ 0usize; 64 ],
+        let mut mg = MoveGen { knight_attacks: [ 0; 64 ],
+                               king_attacks: [ 0; 64 ],
+                               bishop_masks: [ 0; 64 ],
+                               bishop_shifts: [ 0; 64 ],
+                               bishop_magics: [ 0; 64 ],
+                               bishop_offsets: [ 0; 64 ],
                                bishop_attacks: Vec::new(),
-                               rook_masks: [ 0u64; 64 ],
-                               rook_shifts: [ 0u8; 64 ],
-                               rook_magics: [ 0u64; 64 ],
-                               rook_offsets: [ 0usize; 64 ],
+                               rook_masks: [ 0; 64 ],
+                               rook_shifts: [ 0; 64 ],
+                               rook_magics: [ 0; 64 ],
+                               rook_offsets: [ 0; 64 ],
                                rook_attacks: Vec::new(), };
 
         mg.init( true );

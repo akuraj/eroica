@@ -39,7 +39,7 @@ impl BitBoard {
     }
 
     pub fn generate_bb_from_sb( sb: &SimpleBoard ) -> Self {
-        let mut bb = BitBoard( [ 0u64; 14 ] );
+        let mut bb = BitBoard( [ 0; 14 ] );
 
         for ( i, &piece ) in sb.iter().enumerate() {
             if piece != EMPTY { bb[ piece ] |= 1 << i }
@@ -144,7 +144,7 @@ pub struct State {
 impl Default for State {
     fn default() -> Self {
         State { simple_board: [ EMPTY; 64 ],
-                bit_board: BitBoard( [ 0u64; 14 ] ),
+                bit_board: BitBoard( [ 0; 14 ] ),
                 to_move: 0,
                 castling: 0,
                 en_passant: NO_EP,
@@ -513,7 +513,7 @@ impl State {
         if self.en_passant != NO_EP {
             1u64 << self.en_passant
         } else {
-            0u64
+            0
         }
     }
 
@@ -782,10 +782,10 @@ impl State {
     pub fn is_legal( &self, mv: &Move ) -> bool {
         let castling_path = mv.castling_path(); // zero if not castling
         if castling_path != 0 {
-            self.attacked & castling_path == 0u64 // No checks on the king's path incluing the starting and ending square
+            self.attacked & castling_path == 0 // No checks on the king's path incluing the starting and ending square
         } else {
             if mv.piece == ( self.to_move | KING ) {
-                self.attacked & ( 1u64 << mv.to ) == 0u64 // King can't move into check
+                self.attacked & ( 1u64 << mv.to ) == 0 // King can't move into check
             } else if self.num_checks > 1 {
                 false // Double check, only the King can move
             } else {
