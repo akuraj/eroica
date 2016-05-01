@@ -78,6 +78,22 @@ impl Move {
         }
     }
 
+    pub fn castling_path( &self ) -> u64 {
+        match ( self.piece, self.from ) {
+            ( WHITE_KING, 4 ) => match self.to {
+                2 => WQCR,
+                6 => WKCR,
+                _ => 0,
+            },
+            ( BLACK_KING, 60 ) => match self.to {
+                58 => BQCR,
+                62 => BKCR,
+                _ => 0,
+            },
+            _ => 0,
+        }
+    }
+
     pub fn is_promotion( &self ) -> bool {
         match ( self.piece, self.from / 8 ) {
             ( WHITE_PAWN, 6 ) | ( BLACK_PAWN, 1 ) => true,
@@ -90,7 +106,7 @@ impl Move {
     }
 }
 
-// Irreversible State
+// Irreversible State - and also attack and defend info - which is expensive to recalc
 pub struct IRState {
     pub castling: u8,
     pub en_passant: usize, // Store the pos (square address)
@@ -99,7 +115,7 @@ pub struct IRState {
     // Expense stuff to recalc
     pub attacked: u64,
     pub num_checks: u8,
-    pub checks: u64,
+    pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
 }
 
@@ -117,7 +133,7 @@ pub struct State {
 
     pub attacked: u64,
     pub num_checks: u8,
-    pub checks: u64,
+    pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
 
     // repetition table
@@ -137,7 +153,7 @@ impl Default for State {
                 mg: MoveGen { ..Default::default() },
                 attacked: 0,
                 num_checks: 0,
-                checks: 0,
+                check_blocker: FULL_BOARD,
                 a_pins: [ FULL_BOARD; 64 ], }
     }
 }
@@ -296,8 +312,18 @@ impl State {
                  halfmove_clock: self.halfmove_clock,
                  attacked: self.attacked,
                  num_checks: self.num_checks,
-                 checks: self.checks,
+                 check_blocker: self.check_blocker,
                  a_pins: self.a_pins, }
+    }
+
+    pub fn set_ir_state( &mut self, irs: &IRState ) {
+        self.castling = irs.castling;
+        self.en_passant = irs.en_passant;
+        self.halfmove_clock = irs.halfmove_clock;
+        self.attacked = irs.attacked;
+        self.num_checks = irs.num_checks;
+        self.check_blocker = irs.check_blocker;
+        self.a_pins = irs.a_pins;
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -473,13 +499,7 @@ impl State {
         }
 
         // set IRState
-        self.castling = irs.castling;
-        self.en_passant = irs.en_passant;
-        self.halfmove_clock = irs.halfmove_clock;
-        self.attacked = irs.attacked;
-        self.num_checks = irs.num_checks;
-        self.checks = irs.checks;
-        self.a_pins = irs.a_pins;
+        self.set_ir_state( irs );
 
         self.bit_board.set_all(); // update 'ALL' bit_boards
         self.to_move ^= COLOR; // set side
@@ -611,7 +631,7 @@ impl State {
 
         self.attacked = 0;
         self.num_checks = 0;
-        self.checks = 0;
+        self.check_blocker = FULL_BOARD;
         self.a_pins = [ FULL_BOARD; 64 ];
 
         let side = self.to_move;
@@ -639,7 +659,7 @@ impl State {
 
             if r_attacks & king != 0 {
                 self.num_checks += 1;
-                self.checks |= line_of_attack( king_pos, pos, r_attacks );
+                self.check_blocker &= line_of_attack( king_pos, pos, r_attacks );
             }
         }
 
@@ -652,7 +672,7 @@ impl State {
 
             if b_attacks & king != 0 {
                 self.num_checks += 1;
-                self.checks |= line_of_attack( king_pos, pos, b_attacks );
+                self.check_blocker &= line_of_attack( king_pos, pos, b_attacks );
             }
         }
 
@@ -665,7 +685,7 @@ impl State {
 
             if o_attacks & king != 0 {
                 self.num_checks += 1;
-                self.checks |= 1u64 << pos;
+                self.check_blocker &= 1u64 << pos;
             }
         }
 
@@ -678,7 +698,7 @@ impl State {
 
             if o_attacks & king != 0 {
                 self.num_checks += 1;
-                self.checks |= 1u64 << pos;
+                self.check_blocker &= 1u64 << pos;
             }
         }
 
@@ -760,6 +780,17 @@ impl State {
     }
 
     pub fn is_legal( &self, mv: &Move ) -> bool {
-        false
+        let castling_path = mv.castling_path(); // zero if not castling
+        if castling_path != 0 {
+            self.attacked & castling_path == 0u64 // No checks on the king's path incluing the starting and ending square
+        } else {
+            if mv.piece == ( self.to_move | KING ) {
+                self.attacked & ( 1u64 << mv.to ) == 0u64 // King can't move into check
+            } else if self.num_checks > 1 {
+                false // Double check, only the King can move
+            } else {
+                ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1u64 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
+            }
+        }
     }
 }
