@@ -151,7 +151,7 @@ pub struct State {
     pub castling: u8,
     pub en_passant: usize, // Store the pos (square address)
     pub halfmove_clock: u8,
-    pub fullmove_count: u8,
+    pub fullmove_count: u8, // Starts a 1 (First Move)
 
     pub mg: MoveGen,
 
@@ -317,7 +317,7 @@ impl State {
                 5 => {
                     // fullmove_count
                     state.fullmove_count = match section {
-                        "-" => 0,
+                        "-" => 1,
                          _  => section.parse::<u8>().unwrap(),
                     }
                 },
@@ -331,6 +331,10 @@ impl State {
         // FIXME: Implement a state check
 
         state
+    }
+
+    pub fn new_game() -> Self {
+        State::generate_state_from_fen( START_FEN )
     }
 
     pub fn ir_state( &self ) -> IRState {
