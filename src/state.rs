@@ -106,6 +106,15 @@ impl Move {
     }
 }
 
+// Game status enum
+#[ derive( Clone, Debug ) ]
+pub enum Status {
+    Unknown,
+    Ongoing{ legal_moves: Vec<Move> },
+    Checkmake,
+    Stalemate
+}
+
 // Irreversible State - and also attack and defend info - which is expensive to recalc
 pub struct IRState {
     pub castling: u8,
@@ -117,6 +126,7 @@ pub struct IRState {
     pub num_checks: u8,
     pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
+    pub status: Status,
 }
 
 // Full state
@@ -136,6 +146,7 @@ pub struct State {
     pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
 
+    pub status: Status,
     // repetition table
     // hash
     // other bb items
@@ -154,7 +165,8 @@ impl Default for State {
                 attacked: 0,
                 num_checks: 0,
                 check_blocker: FULL_BOARD,
-                a_pins: [ FULL_BOARD; 64 ], }
+                a_pins: [ FULL_BOARD; 64 ],
+                status: Status::Unknown, }
     }
 }
 
@@ -300,6 +312,7 @@ impl State {
         }
 
         state.update_ad();
+        state.status = Status::Unknown;
 
         // FIXME: Implement a state check
 
@@ -313,7 +326,8 @@ impl State {
                  attacked: self.attacked,
                  num_checks: self.num_checks,
                  check_blocker: self.check_blocker,
-                 a_pins: self.a_pins, }
+                 a_pins: self.a_pins,
+                 status: self.status.clone() }
     }
 
     pub fn set_ir_state( &mut self, irs: &IRState ) {
@@ -324,6 +338,7 @@ impl State {
         self.num_checks = irs.num_checks;
         self.check_blocker = irs.check_blocker;
         self.a_pins = irs.a_pins;
+        self.status = irs.status.clone();
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -431,6 +446,7 @@ impl State {
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
         self.update_ad();
+        self.status = Status::Unknown;
 
         // update repetition table
         // update other blah
@@ -792,5 +808,8 @@ impl State {
                 ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1u64 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
             }
         }
+    }
+
+    pub fn update_status( &mut self ) {
     }
 }
