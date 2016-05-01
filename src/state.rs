@@ -333,6 +333,70 @@ impl State {
         state
     }
 
+    pub fn fen( &self ) -> String {
+        let mut output = String::new();
+
+        output.push( '"' );
+
+        // Board
+        let mut counter: usize;
+        let mut piece: u8;
+        for j in ( 0..8 ).rev() {
+            counter = 0;
+            for i in 0..8 {
+                piece = self.simple_board[ i + 8 * j ];
+                if piece == EMPTY {
+                    counter += 1;
+                } else if counter > 0 {
+                    output.push_str( &counter.to_string() );
+                    output.push( piece_to_char( piece ) );
+                    counter = 0;
+                } else {
+                    output.push( piece_to_char( piece ) );
+                }
+            }
+
+            if counter > 0 {
+                output.push_str( &counter.to_string() );
+            }
+            if j != 0 {
+                output.push( '/' );
+            }
+        }
+
+        // Side to move
+        match self.to_move {
+            WHITE => output.push_str( " w " ),
+            BLACK => output.push_str( " b " ),
+            _ => panic!( "Invalid color!" ),
+        }
+
+        // Castling
+        if self.castling & WK_CASTLE != 0 { output.push( 'K') }
+        if self.castling & WQ_CASTLE != 0 { output.push( 'Q') }
+        if self.castling & BK_CASTLE != 0 { output.push( 'k') }
+        if self.castling & BQ_CASTLE != 0 { output.push( 'q') }
+        output.push( ' ' );
+
+        // ep
+        if self.en_passant != NO_EP {
+            output.push_str( &offset_to_algebraic( self.en_passant ) );
+        } else {
+            output.push( '-' );
+        }
+        output.push( ' ' );
+
+        // halfmove_clock
+        output.push_str( &self.halfmove_clock.to_string() );
+        output.push( ' ' );
+
+        // fullmove_count
+        output.push_str( &self.fullmove_count.to_string() );
+
+        output.push( '"' );
+        output
+    }
+
     pub fn new_game() -> Self {
         State::generate_state_from_fen( START_FEN )
     }
@@ -912,20 +976,5 @@ impl State {
 
             nodes
         }
-
-        /*
-        MOVE move_list[256];
-   int n_moves, i;
-   u64 nodes = 0;
-
-   if (depth == 0) return 1;
-
-   n_moves = GenerateMoves(move_list);
-   for (i = 0; i < n_moves; i++) {
-       MakeMove(move_list[i]);
-       nodes += Perft(depth - 1);
-       UndoMove(move_list[i]);
-       */
-
     }
 }

@@ -43,12 +43,16 @@ use rand::{ Rng, thread_rng };
 
 fn main() {
     let mut state = State::new_game();
+    println!( "{}", state.fen() );
+
+    /*
     let depth: usize = 5;
     let t1 = precise_time_ns();
     let perft_val = state.perft( depth, true );
     let t2 = precise_time_ns();
     println!( "Perft( {} ): {}", depth, perft_val );
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+    */
 
     //println!( "Speed: {} MNPS", ( ( loop_size as f32 * moves.len() as f32 ) / ( ( ( t2 - t1 ) as f32 ) / 1e9 ) ) / 1e6 );
 
