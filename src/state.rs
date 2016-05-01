@@ -100,7 +100,7 @@ pub struct IRState {
     pub attacked: u64,
     pub num_checks: u8,
     pub checks: u64,
-    pub a_pins: [ usize; 64 ],
+    pub a_pins: [ u64; 64 ],
 }
 
 // Full state
@@ -118,7 +118,7 @@ pub struct State {
     pub attacked: u64,
     pub num_checks: u8,
     pub checks: u64,
-    pub a_pins: [ usize; 64 ],
+    pub a_pins: [ u64; 64 ],
 
     // repetition table
     // hash
@@ -138,7 +138,7 @@ impl Default for State {
                 attacked: 0,
                 num_checks: 0,
                 checks: 0,
-                a_pins: [ 0; 64 ], }
+                a_pins: [ FULL_BOARD; 64 ], }
     }
 }
 
@@ -283,7 +283,7 @@ impl State {
             }
         }
 
-        state.compute_attacked();
+        state.update_ad();
 
         // FIXME: Implement a state check
 
@@ -404,7 +404,7 @@ impl State {
         if side == BLACK { self.fullmove_count += 1; } // update fullmove_count
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
-        self.compute_attacked();
+        self.update_ad();
 
         // update repetition table
         // update other blah
@@ -601,7 +601,8 @@ impl State {
         moves
     }
 
-    pub fn compute_attacked( &mut self ) {
+    pub fn update_ad( &mut self ) {
+        // Updates the attack and defend information ---
         // Computes the following
         // attacked: all the squares attacked by enemies (including enemy pieces, which are 'defended')
         // num_checks
@@ -611,7 +612,7 @@ impl State {
         self.attacked = 0;
         self.num_checks = 0;
         self.checks = 0;
-        self.a_pins = [ ERR_POS; 64 ];
+        self.a_pins = [ FULL_BOARD; 64 ];
 
         let side = self.to_move;
         let opp_side = side ^ COLOR;
@@ -667,7 +668,7 @@ impl State {
                 self.checks |= 1u64 << pos;
             }
         }
-        
+
         // PAWN
         bb = self.bit_board[ opp_side | PAWN ];
         while bb != 0 {
@@ -694,14 +695,16 @@ impl State {
         let mut possibly_pinned: u64;
         let mut pinners: u64;
         let mut pinned_pos: usize;
+        let mut pin: u64;
 
         // Diagonal pins
         possibly_pinned = self.mg.b_moves( king_pos, occupancy ) & friends;
         pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] );
         while pinners != 0 {
             pos = pop_lsb_pos( &mut pinners );
-            pinned_pos = ( possibly_pinned & line( king_pos, pos ) ).trailing_zeros() as usize;
-            self.a_pins[ pinned_pos ] = pos;
+            pin = line( king_pos, pos );
+            pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+            self.a_pins[ pinned_pos ] &= pin;
         }
 
         // Orthogonal pins
@@ -709,8 +712,9 @@ impl State {
         pinners = self.mg.r_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] );
         while pinners != 0 {
             pos = pop_lsb_pos( &mut pinners );
-            pinned_pos = ( possibly_pinned & line( king_pos, pos ) ).trailing_zeros() as usize;
-            self.a_pins[ pinned_pos ] = pos;
+            pin = line( king_pos, pos );
+            pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+            self.a_pins[ pinned_pos ] &= pin;
         }
 
         // ep pins - the special stuff
@@ -723,7 +727,11 @@ impl State {
                     _ => panic!( "Invalid color!" ),
                 };
 
+                // Everything except EP, basically if EP capture leads to check, ban it!
+                pin = FULL_BOARD ^ ( 1u64 << self.en_passant );
+
                 // Check if ep_target is diagonally pinned to our king
+                // Btw, it cannot be pinned orthogonally (unless both ep_killer and ep_target are horizontally pinned to our king, which is handled after this)
                 let mut ep_diag_pin = false;
                 possibly_pinned = self.mg.b_moves( king_pos, occupancy ) & ( 1u64 << ep_target );
                 if possibly_pinned != 0 {
@@ -735,20 +743,14 @@ impl State {
                     pinned_pos = pop_lsb_pos( &mut ep_killers );
 
                     if ep_diag_pin {
-                        self.a_pins[ pinned_pos ] = match self.a_pins[ pinned_pos ] == ERR_POS {
-                            true => EP_PIN,
-                            false => self.a_pins[ pinned_pos ] | EP_PIN,
-                        };
+                        self.a_pins[ pinned_pos ] &= pin; // Everything except EP
                     } else {
                         // Check if both pawns are horizontally pinned to our king
                         let ep_clear: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target );
                         r_attacks = self.mg.r_moves( king_pos, occupancy ^ ep_clear );
                         if r_attacks & ep_clear == ep_clear {
                             if r_attacks & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) != 0 {
-                                self.a_pins[ pinned_pos ] = match self.a_pins[ pinned_pos ] == ERR_POS {
-                                    true => EP_PIN,
-                                    false => self.a_pins[ pinned_pos ] | EP_PIN,
-                                };
+                                self.a_pins[ pinned_pos ] &= pin;
                             }
                         }
                     }
