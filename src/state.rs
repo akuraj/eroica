@@ -746,29 +746,41 @@ impl State {
 
         /**** Pins ****/
 
+        let mut vision: u64;
         let mut possibly_pinned: u64;
+        let mut possibly_attacking: u64;
         let mut pinners: u64;
         let mut pinned_pos: usize;
         let mut pin: u64;
 
         // Diagonal pins
-        possibly_pinned = self.mg.b_moves( king_pos, occupancy ) & friends;
-        pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] );
-        while pinners != 0 {
-            pos = pop_lsb_pos( &mut pinners );
-            pin = line( king_pos, pos );
-            pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
-            self.a_pins[ pinned_pos ] &= pin;
+        vision = self.mg.b_moves( king_pos, occupancy );
+        possibly_pinned = vision & friends;
+        if possibly_pinned != 0 {
+            possibly_attacking = vision & enemies;
+            pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) &
+                      ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] ) & !possibly_attacking );
+            while pinners != 0 {
+                pos = pop_lsb_pos( &mut pinners );
+                pin = line( king_pos, pos );
+                pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+                self.a_pins[ pinned_pos ] &= pin;
+            }
         }
 
         // Orthogonal pins
-        possibly_pinned = self.mg.r_moves( king_pos, occupancy ) & friends;
-        pinners = self.mg.r_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] );
-        while pinners != 0 {
-            pos = pop_lsb_pos( &mut pinners );
-            pin = line( king_pos, pos );
-            pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
-            self.a_pins[ pinned_pos ] &= pin;
+        vision = self.mg.r_moves( king_pos, occupancy );
+        possibly_pinned = vision & friends;
+        if possibly_pinned != 0 {
+            possibly_attacking = vision & enemies;
+            pinners = self.mg.r_moves( king_pos, occupancy ^ possibly_pinned ) &
+                      ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
+            while pinners != 0 {
+                pos = pop_lsb_pos( &mut pinners );
+                pin = line( king_pos, pos );
+                pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+                self.a_pins[ pinned_pos ] &= pin;
+            }
         }
 
         // ep pins - the special stuff
@@ -787,9 +799,12 @@ impl State {
                 // Check if ep_target is diagonally pinned to our king
                 // Btw, it cannot be pinned orthogonally (unless both ep_killer and ep_target are horizontally pinned to our king, which is handled after this)
                 let mut ep_diag_pin = false;
-                possibly_pinned = self.mg.b_moves( king_pos, occupancy ) & ( 1u64 << ep_target );
+                vision = self.mg.b_moves( king_pos, occupancy );
+                possibly_pinned = vision & ( 1u64 << ep_target );
                 if possibly_pinned != 0 {
-                    pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] );
+                    possibly_attacking = vision & enemies;
+                    pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) &
+                              ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] ) & !possibly_attacking );
                     if pinners != 0 { ep_diag_pin = true; }
                 }
 
@@ -801,9 +816,13 @@ impl State {
                     } else {
                         // Check if both pawns are horizontally pinned to our king
                         let ep_clear: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target );
-                        r_attacks = self.mg.r_moves( king_pos, occupancy ^ ep_clear );
-                        if r_attacks & ep_clear == ep_clear {
-                            if r_attacks & ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) != 0 {
+                        vision = self.mg.r_moves( king_pos, occupancy );
+                        if vision & ep_clear != 0 {
+                            possibly_attacking = vision & enemies;
+                            pinners = self.mg.r_moves( king_pos, occupancy ^ ep_clear ) &
+                                      ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
+
+                            if pinners != 0 {
                                 self.a_pins[ pinned_pos ] &= pin;
                             }
                         }
@@ -853,5 +872,60 @@ impl State {
     pub fn legal_moves( &mut self ) -> Vec<Move> {
         self.update_node_info();
         self.node_info.legal_moves.clone()
+    }
+
+    pub fn perft( &mut self, depth: usize, debug: bool ) -> u64 {
+        if debug {
+            println!( "Depth from top: {}", depth );
+        }
+
+        let legal_moves = self.legal_moves();
+
+        if legal_moves.len() == 0 {
+            1
+        } else if depth == 1 {
+            legal_moves.len() as u64
+        } else {
+            let mut nodes: u64 = 0;
+            let mut temp: u64;
+            let irs = self.ir_state();
+
+            for mv in &legal_moves {
+                self.make( mv );
+                temp = self.perft( depth - 1, false );
+                self.unmake( mv, &irs );
+
+                if debug {
+                    println!( "{}-{} = {}",
+                        //"{}. {}{} {}-{} = {}",
+                        //self.fullmove_count,
+                        //if self.to_move == BLACK { ".. " } else { "" },
+                        //piece_to_char( mv.piece ),
+                        offset_to_algebraic( mv.from ),
+                        offset_to_algebraic( mv.to ),
+                        temp
+                    );
+                }
+
+                nodes += temp;
+            }
+
+            nodes
+        }
+
+        /*
+        MOVE move_list[256];
+   int n_moves, i;
+   u64 nodes = 0;
+
+   if (depth == 0) return 1;
+
+   n_moves = GenerateMoves(move_list);
+   for (i = 0; i < n_moves; i++) {
+       MakeMove(move_list[i]);
+       nodes += Perft(depth - 1);
+       UndoMove(move_list[i]);
+       */
+
     }
 }
