@@ -738,12 +738,11 @@ impl State {
         let king_pos = king.trailing_zeros() as usize;
         let friends = self.bit_board[ side | ALL ];
         let enemies = self.bit_board[ opp_side | ALL ];
-        let occupancy = friends | enemies;
-
+        
         // NOTE: We are computing attacks of enemy pieces.
         // So, the king, if in check is going to be blocking some sliding piece attacks, and we need to account for that.
         // This wouldn't come up when computing control of friendlies, because, if it's my move, then the enemy king can't be in check..
-        let occupancy_wo_king = occupancy ^ king;
+        let occupancy_wo_king = ( friends | enemies ) ^ king;
 
         let mut bb: u64;
         let mut pos: usize;
@@ -862,8 +861,10 @@ impl State {
                     _ => panic!( "Invalid color!" ),
                 };
 
+                let ep_bb = self.ep_bb();
+
                 // Everything except EP, basically if EP capture leads to check, ban it!
-                pin = FULL_BOARD ^ ( 1u64 << self.en_passant );
+                pin = FULL_BOARD ^ ep_bb;
 
                 // Check if ep_target is diagonally pinned to our king
                 // Btw, it cannot be pinned orthogonally (unless both ep_killer and ep_target are horizontally pinned to our king, which is handled after this)
@@ -877,18 +878,20 @@ impl State {
                     if pinners != 0 { ep_diag_pin = true; }
                 }
 
-                while ep_killers != 0 {
-                    pinned_pos = pop_lsb_pos( &mut ep_killers );
-
-                    if ep_diag_pin {
+                if ep_diag_pin {
+                    while ep_killers != 0 {
+                        pinned_pos = pop_lsb_pos( &mut ep_killers );
                         self.a_pins[ pinned_pos ] &= pin; // Everything except EP
-                    } else {
-                        // Check if both pawns are horizontally pinned to our king
-                        let ep_clear: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target );
+                    }
+                } else if king_pos / 8 == ep_target / 8 {
+                    // Check if the capturing pawn(s) are horizontally pinned to our king (can only be horizontal...)
+                    while ep_killers != 0 {
+                        pinned_pos = pop_lsb_pos( &mut ep_killers );
+                        let ep_apply: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target ) | ep_bb;
                         vision = self.mg.r_moves( king_pos, occupancy_wo_king );
-                        if vision & ep_clear != 0 {
+                        if vision & ep_apply != 0 {
                             possibly_attacking = vision & enemies;
-                            pinners = self.mg.r_moves( king_pos, occupancy_wo_king ^ ep_clear ) &
+                            pinners = self.mg.r_moves( king_pos, occupancy_wo_king ^ ep_apply ) &
                                       ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
 
                             if pinners != 0 {
@@ -945,7 +948,7 @@ impl State {
 
     pub fn perft( &mut self, depth: usize, debug: bool ) -> u64 {
         assert!( depth > 0, "Depth has to be greater than zero!" );
-        
+
         let legal_moves = self.legal_moves();
 
         if depth == 1 {
