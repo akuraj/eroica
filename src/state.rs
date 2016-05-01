@@ -740,6 +740,11 @@ impl State {
         let enemies = self.bit_board[ opp_side | ALL ];
         let occupancy = friends | enemies;
 
+        // NOTE: We are computing attacks of enemy pieces.
+        // So, the king, if in check is going to be blocking some sliding piece attacks, and we need to account for that.
+        // This wouldn't come up when computing control of friendlies, because, if it's my move, then the enemy king can't be in check..
+        let occupancy_wo_king = occupancy ^ king;
+
         let mut bb: u64;
         let mut pos: usize;
         let mut o_attacks: u64;
@@ -752,12 +757,12 @@ impl State {
         bb = self.bit_board[ opp_side | ROOK ] | self.bit_board[ opp_side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            r_attacks = self.mg.r_moves( pos, occupancy );
+            r_attacks = self.mg.r_moves( pos, occupancy_wo_king );
             self.attacked |= r_attacks;
 
             if r_attacks & king != 0 {
                 self.num_checks += 1;
-                self.check_blocker &= line_of_attack( king_pos, pos, r_attacks );
+                self.check_blocker &= line_segment( pos, king_pos ) ^ king;
             }
         }
 
@@ -765,12 +770,12 @@ impl State {
         bb = self.bit_board[ opp_side | BISHOP ] | self.bit_board[ opp_side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            b_attacks = self.mg.b_moves( pos, occupancy );
+            b_attacks = self.mg.b_moves( pos, occupancy_wo_king );
             self.attacked |= b_attacks;
 
             if b_attacks & king != 0 {
                 self.num_checks += 1;
-                self.check_blocker &= line_of_attack( king_pos, pos, b_attacks );
+                self.check_blocker &= line_segment( pos, king_pos ) ^ king;
             }
         }
 
@@ -818,30 +823,30 @@ impl State {
         let mut pin: u64;
 
         // Diagonal pins
-        vision = self.mg.b_moves( king_pos, occupancy );
+        vision = self.mg.b_moves( king_pos, occupancy_wo_king );
         possibly_pinned = vision & friends;
         if possibly_pinned != 0 {
             possibly_attacking = vision & enemies;
-            pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) &
+            pinners = self.mg.b_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
                       ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] ) & !possibly_attacking );
             while pinners != 0 {
                 pos = pop_lsb_pos( &mut pinners );
-                pin = line( king_pos, pos );
+                pin = line_segment( pos, king_pos ) ^ king;
                 pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
                 self.a_pins[ pinned_pos ] &= pin;
             }
         }
 
         // Orthogonal pins
-        vision = self.mg.r_moves( king_pos, occupancy );
+        vision = self.mg.r_moves( king_pos, occupancy_wo_king );
         possibly_pinned = vision & friends;
         if possibly_pinned != 0 {
             possibly_attacking = vision & enemies;
-            pinners = self.mg.r_moves( king_pos, occupancy ^ possibly_pinned ) &
+            pinners = self.mg.r_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
                       ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
             while pinners != 0 {
                 pos = pop_lsb_pos( &mut pinners );
-                pin = line( king_pos, pos );
+                pin = line_segment( pos, king_pos ) ^ king;
                 pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
                 self.a_pins[ pinned_pos ] &= pin;
             }
@@ -863,11 +868,11 @@ impl State {
                 // Check if ep_target is diagonally pinned to our king
                 // Btw, it cannot be pinned orthogonally (unless both ep_killer and ep_target are horizontally pinned to our king, which is handled after this)
                 let mut ep_diag_pin = false;
-                vision = self.mg.b_moves( king_pos, occupancy );
+                vision = self.mg.b_moves( king_pos, occupancy_wo_king );
                 possibly_pinned = vision & ( 1u64 << ep_target );
                 if possibly_pinned != 0 {
                     possibly_attacking = vision & enemies;
-                    pinners = self.mg.b_moves( king_pos, occupancy ^ possibly_pinned ) &
+                    pinners = self.mg.b_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
                               ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] ) & !possibly_attacking );
                     if pinners != 0 { ep_diag_pin = true; }
                 }
@@ -880,10 +885,10 @@ impl State {
                     } else {
                         // Check if both pawns are horizontally pinned to our king
                         let ep_clear: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target );
-                        vision = self.mg.r_moves( king_pos, occupancy );
+                        vision = self.mg.r_moves( king_pos, occupancy_wo_king );
                         if vision & ep_clear != 0 {
                             possibly_attacking = vision & enemies;
-                            pinners = self.mg.r_moves( king_pos, occupancy ^ ep_clear ) &
+                            pinners = self.mg.r_moves( king_pos, occupancy_wo_king ^ ep_clear ) &
                                       ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
 
                             if pinners != 0 {
@@ -939,15 +944,11 @@ impl State {
     }
 
     pub fn perft( &mut self, depth: usize, debug: bool ) -> u64 {
-        if debug {
-            println!( "Depth from top: {}", depth );
-        }
-
+        assert!( depth > 0, "Depth has to be greater than zero!" );
+        
         let legal_moves = self.legal_moves();
 
-        if legal_moves.len() == 0 {
-            1
-        } else if depth == 1 {
+        if depth == 1 {
             legal_moves.len() as u64
         } else {
             let mut nodes: u64 = 0;

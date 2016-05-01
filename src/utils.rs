@@ -425,7 +425,11 @@ pub fn line( pos1: usize, pos2: usize ) -> u64 {
     }
 }
 
-// All the squares that I can send a piece to, to block the check
-pub fn line_of_attack( king_pos: usize, pos: usize, attacks: u64 ) -> u64 {
-    ( line( king_pos, pos ) & attacks ) ^ ( ( 1u64 << king_pos ) | ( 1u64 << pos ) )
+// Returns line segment joining pos1 and pos2
+pub fn line_segment( pos1: usize, pos2: usize ) -> u64 {
+    line( pos1, pos2 ) & if pos1 > pos2 {
+        ( MAX >> ( 63 - pos1 ) ) & ( MAX << pos2 )
+    } else {
+        ( MAX >> ( 63 - pos2 ) ) & ( MAX << pos1 )
+    }
 }
