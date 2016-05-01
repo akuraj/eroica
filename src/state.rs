@@ -52,7 +52,7 @@ impl BitBoard {
 }
 
 // Move
-#[ derive( Copy, Clone, Debug ) ]
+#[ derive( Copy, Clone, Debug, PartialEq ) ]
 pub struct Move {
     pub piece: u8,
     pub from: usize,
@@ -827,11 +827,13 @@ impl State {
     pub fn update_node_info( &mut self ) {
         if self.node_info.status == Status::Unknown {
             let moves = self.moves();
+
+            // Hmm, this is faster than both (by ~25%) -
+            // 1. legal_moves = moves.into_iter().filter( |x| self.is_legal( &x ) ).collect();
+            // 2. legal_moves = moves.iter().filter( |x| self.is_legal( x ) ).map( |x| *x ).collect();
             let mut legal_moves: Vec<Move> = Vec::new();
             for mv in &moves {
-                if self.is_legal( mv ) {
-                    legal_moves.push( *mv );
-                }
+                if self.is_legal( mv ) { legal_moves.push( *mv ); }
             }
 
             self.node_info.status = match ( legal_moves.len() == 0, self.num_checks > 0 ) {
