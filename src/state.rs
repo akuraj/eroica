@@ -990,7 +990,7 @@ impl State {
         self.node_info.legal_moves.clone()
     }
 
-    pub fn perft( &mut self, depth: usize, debug: bool ) -> u64 {
+    pub fn perft( &mut self, depth: usize, divide: bool ) -> u64 {
         assert!( depth > 0, "Depth has to be greater than zero!" );
 
         let legal_moves = self.legal_moves();
@@ -999,19 +999,19 @@ impl State {
             legal_moves.len() as u64
         } else {
             let mut nodes: u64 = 0;
-            let mut temp: u64;
+            let mut nodes_child: u64;
             let irs = self.ir_state();
 
             for mv in &legal_moves {
                 self.make( mv );
-                temp = self.perft( depth - 1, false );
+                nodes_child = self.perft( depth - 1, false );
                 self.unmake( mv, &irs );
 
-                if debug {
-                    println!( "{}{}: {}", offset_to_algebraic( mv.from ), offset_to_algebraic( mv.to ), temp );
+                if divide {
+                    println!( "{}{}: {}", offset_to_algebraic( mv.from ), offset_to_algebraic( mv.to ), nodes_child );
                 }
 
-                nodes += temp;
+                nodes += nodes_child;
             }
 
             nodes
