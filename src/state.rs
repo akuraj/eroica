@@ -172,7 +172,7 @@ impl Default for State {
                 bit_board: BitBoard( [ 0; 14 ] ),
                 to_move: 0,
                 castling: 0,
-                en_passant: NO_EP,
+                en_passant: ERR_POS,
                 halfmove_clock: 0,
                 fullmove_count: 0,
                 mg: MoveGen { ..Default::default() },
@@ -225,7 +225,7 @@ impl fmt::Display for State {
         output.push( '\n' );
 
         output.push_str( "En Passant: " );
-        if self.en_passant != NO_EP { output.push_str( &offset_to_algebraic( self.en_passant ) ) }
+        if self.ep_flag() { output.push_str( &offset_to_algebraic( self.en_passant ) ) }
         output.push( '\n' );
 
         output.push_str( "Halfmove Clock: " );
@@ -303,7 +303,7 @@ impl State {
                 3 => {
                     // en_passant
                     state.en_passant = match section {
-                        "-" => NO_EP,
+                        "-" => ERR_POS,
                          _  => algebraic_to_offset( section ),
                     }
                 },
@@ -379,7 +379,7 @@ impl State {
         output.push( ' ' );
 
         // ep
-        if self.en_passant != NO_EP {
+        if self.ep_flag() {
             output.push_str( &offset_to_algebraic( self.en_passant ) );
         } else {
             output.push( '-' );
@@ -426,6 +426,11 @@ impl State {
     pub fn make( &mut self, mv: &Move ) {
         let side = self.to_move;
 
+        if mv.capture == ( ( side ^ COLOR ) | KING ) {
+            print!( "{}", *self );
+            println!( "{:?}", mv );
+        }
+
         // Update simple_board and bit_board
         self.simple_board[ mv.from ] = EMPTY;
         self.simple_board[ mv.to ] = mv.piece;
@@ -434,7 +439,7 @@ impl State {
 
         // Update castling state and en_passant; handle promotion
         // Update simple_board and bit_board for Rook if castling
-        let mut new_ep = NO_EP;
+        let mut new_ep = ERR_POS;
         match mv.piece {
             WHITE_PAWN => {
                 if mv.is_promotion() {
@@ -626,9 +631,29 @@ impl State {
         // update other blah
     }
 
+    pub fn ep_flag( &self ) -> bool {
+        self.en_passant != ERR_POS
+    }
+
     pub fn ep_bb( &self ) -> u64 {
-        if self.en_passant != NO_EP {
+        if self.ep_flag() {
             1u64 << self.en_passant
+        } else {
+            0
+        }
+    }
+
+    pub fn ep_target( &self ) -> usize {
+        match ( self.to_move, self.ep_flag() ) {
+            ( WHITE, true ) => self.en_passant - 8,
+            ( BLACK, true ) => self.en_passant + 8,
+            _ => ERR_POS,
+        }
+    }
+
+    pub fn ep_target_bb( &self ) -> u64 {
+        if self.ep_flag() {
+            1u64 << self.ep_target()
         } else {
             0
         }
@@ -871,15 +896,10 @@ impl State {
         }
 
         // ep pins - the special stuff
-        if self.en_passant != NO_EP {
+        if self.ep_flag() {
             let mut ep_killers = self.bit_board[ side | PAWN ] & self.mg.p_captures( self.en_passant, opp_side );
             if ep_killers != 0 {
-                let ep_target: usize = match side {
-                    WHITE => self.en_passant - 8,
-                    BLACK => self.en_passant + 8,
-                    _ => panic!( "Invalid color!" ),
-                };
-
+                let ep_target = self.ep_target();
                 let ep_bb = self.ep_bb();
 
                 // Everything except EP, basically if EP capture leads to check, ban it!
@@ -933,7 +953,12 @@ impl State {
             } else if self.num_checks > 1 {
                 false // Double check, only the King can move
             } else {
-                ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1u64 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
+                if mv.piece == ( self.to_move | PAWN ) && self.ep_flag() && ( self.check_blocker & self.ep_target_bb() != 0 ) {
+                    // Enemy pawn checking our king can be capture en passant by my pawns
+                    ( ( self.check_blocker | self.ep_bb() ) & self.a_pins[ mv.from ] ) & ( 1u64 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
+                } else {
+                    ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1u64 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
+                }
             }
         }
     }

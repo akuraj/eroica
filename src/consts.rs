@@ -44,7 +44,6 @@ pub const W_CASTLE: u8 = WK_CASTLE | WQ_CASTLE;
 pub const B_CASTLE: u8 = BK_CASTLE | BQ_CASTLE;
 
 // Other
-pub const NO_EP: usize = !0usize; // Absense of EP
 pub const ERR_POS: usize = !0usize; // Error Position
 pub const FULL_BOARD: u64 = !0u64; // All bits set on the board
 

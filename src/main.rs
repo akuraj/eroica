@@ -48,17 +48,29 @@ fn main() {
     let mut state = State::generate_state_from_fen( fen );
 
     /*
-    let mv = Move { piece: WHITE_KNIGHT, from: algebraic_to_offset( "e5" ), to: algebraic_to_offset( "g6" ), capture: BLACK_PAWN, promotion: EMPTY };
+    let mv = Move { piece: WHITE_ROOK, from: algebraic_to_offset( "b4" ), to: algebraic_to_offset( "a4" ), capture: EMPTY, promotion: EMPTY };
     state.make( &mv );
 
-    let mv = Move { piece: BLACK_QUEEN, from: algebraic_to_offset( "e7" ), to: algebraic_to_offset( "c5" ), capture: EMPTY, promotion: EMPTY };
+    let mv = Move { piece: BLACK_ROOK, from: algebraic_to_offset( "h5" ), to: algebraic_to_offset( "c5" ), capture: EMPTY, promotion: EMPTY };
+    state.make( &mv );
+
+    let mv = Move { piece: WHITE_KING, from: algebraic_to_offset( "a5" ), to: algebraic_to_offset( "b4" ), capture: EMPTY, promotion: EMPTY };
+    state.make( &mv );
+
+    let mv = Move { piece: BLACK_ROOK, from: algebraic_to_offset( "c5" ), to: algebraic_to_offset( "c1" ), capture: EMPTY, promotion: EMPTY };
+    state.make( &mv );
+
+    let mv = Move { piece: WHITE_ROOK, from: algebraic_to_offset( "a4" ), to: algebraic_to_offset( "a6" ), capture: EMPTY, promotion: EMPTY };
+    state.make( &mv );
+
+    let mv = Move { piece: BLACK_PAWN, from: algebraic_to_offset( "c7" ), to: algebraic_to_offset( "c5" ), capture: EMPTY, promotion: EMPTY };
     state.make( &mv );
     */
 
     println!( "{}", state.fen() );
     println!( "{}", state );
 
-    let depth: usize = 5;
+    let depth: usize = 7;
     let t1 = precise_time_ns();
     let perft_val = state.perft( depth, true );
     let t2 = precise_time_ns();
