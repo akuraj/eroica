@@ -1008,15 +1008,7 @@ impl State {
                 self.unmake( mv, &irs );
 
                 if debug {
-                    println!( "{}-{} = {}",
-                        //"{}. {}{} {}-{} = {}",
-                        //self.fullmove_count,
-                        //if self.to_move == BLACK { ".. " } else { "" },
-                        //piece_to_char( mv.piece ),
-                        offset_to_algebraic( mv.from ),
-                        offset_to_algebraic( mv.to ),
-                        temp
-                    );
+                    println!( "{}{}: {}", offset_to_algebraic( mv.from ), offset_to_algebraic( mv.to ), temp );
                 }
 
                 nodes += temp;
