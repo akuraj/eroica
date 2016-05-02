@@ -59,6 +59,11 @@ pub struct Move {
     pub to: usize,
     pub capture: u8,
     pub promotion: u8,
+
+    // Irreversible State
+    pub castling: u8,
+    pub en_passant: usize, // Store the pos (square address)
+    pub halfmove_clock: u8,
 }
 
 impl Move {
@@ -104,6 +109,15 @@ impl Move {
     pub fn is_ep( &self, en_passant: usize ) -> bool {
         ( self.piece & PAWN != 0 ) && ( self.to == en_passant )
     }
+
+    // A bb of what changed :)
+    pub fn move_bb( &self ) -> u64 {
+        ( 1u64 << self.from ) | ( 1u64 << self.to )
+    }
+
+    pub fn move_bb_w_ep( &self ) -> u64 {
+        0u64
+    }
 }
 
 // Game status enum
@@ -130,12 +144,7 @@ impl Default for NodeInfo {
 }
 
 // Irreversible State - and also attack and defend info - which is expensive to recalc
-pub struct IRState {
-    pub castling: u8,
-    pub en_passant: usize, // Store the pos (square address)
-    pub halfmove_clock: u8,
-
-    // Expense stuff to recalc
+pub struct Control {
     pub attacked: u64,
     pub num_checks: u8,
     pub check_blocker: u64,
@@ -397,24 +406,24 @@ impl State {
         State::generate_state_from_fen( START_FEN )
     }
 
-    pub fn ir_state( &self ) -> IRState {
-        IRState{ castling: self.castling,
-                 en_passant: self.en_passant,
-                 halfmove_clock: self.halfmove_clock,
-                 attacked: self.attacked,
+    pub fn set_ir_state( &mut self, mv: &Move ) {
+        self.castling = mv.castling;
+        self.en_passant = mv.en_passant;
+        self.halfmove_clock = mv.halfmove_clock;
+    }
+
+    pub fn control( &self ) -> Control {
+        Control{ attacked: self.attacked,
                  num_checks: self.num_checks,
                  check_blocker: self.check_blocker,
                  a_pins: self.a_pins, }
     }
 
-    pub fn set_ir_state( &mut self, irs: &IRState ) {
-        self.castling = irs.castling;
-        self.en_passant = irs.en_passant;
-        self.halfmove_clock = irs.halfmove_clock;
-        self.attacked = irs.attacked;
-        self.num_checks = irs.num_checks;
-        self.check_blocker = irs.check_blocker;
-        self.a_pins = irs.a_pins;
+    pub fn set_control( &mut self, control: &Control ) {
+        self.attacked = control.attacked;
+        self.num_checks = control.num_checks;
+        self.check_blocker = control.check_blocker;
+        self.a_pins = control.a_pins;
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -428,7 +437,7 @@ impl State {
         // Update simple_board and bit_board
         self.simple_board[ mv.from ] = EMPTY;
         self.simple_board[ mv.to ] = mv.piece;
-        self.bit_board[ mv.piece ] ^= ( 1u64 << mv.from ) | ( 1u64 << mv.to );
+        self.bit_board[ mv.piece ] ^= mv.move_bb();
         if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
 
         // Update castling state and en_passant; handle promotion
@@ -551,13 +560,13 @@ impl State {
         // update other blah
     }
 
-    pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
+    pub fn unmake( &mut self, mv: &Move, control: &Control ) {
         let side = self.to_move ^ COLOR; // side that just moved
 
         // Update simple_board and bit_board
         self.simple_board[ mv.from ] = mv.piece;
         self.simple_board[ mv.to ] = mv.capture;
-        self.bit_board[ mv.piece ] ^= ( 1u64 << mv.from ) | ( 1u64 << mv.to );
+        self.bit_board[ mv.piece ] ^= mv.move_bb();
         if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
 
         // Undo castling and en_passant
@@ -566,7 +575,7 @@ impl State {
                 if mv.is_promotion() {
                     self.bit_board[ WHITE_PAWN ] ^= 1u64 << mv.to;
                     self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
-                } else if irs.en_passant == mv.to {
+                } else if mv.en_passant == mv.to {
                     self.simple_board[ mv.to - 8 ] = BLACK_PAWN;
                     self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
                 }
@@ -590,7 +599,7 @@ impl State {
                 if mv.is_promotion() {
                     self.bit_board[ BLACK_PAWN ] ^= 1u64 << mv.to;
                     self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
-                } else if irs.en_passant == mv.to {
+                } else if mv.en_passant == mv.to {
                     self.simple_board[ mv.to + 8 ] = WHITE_PAWN;
                     self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
                 }
@@ -613,8 +622,8 @@ impl State {
             _ => {},
         }
 
-        // set IRState
-        self.set_ir_state( irs );
+        self.set_ir_state( mv );
+        self.set_control( control );
 
         self.bit_board.set_all(); // update 'ALL' bit_boards
         self.to_move ^= COLOR; // set side
@@ -652,9 +661,20 @@ impl State {
         }
     }
 
+    pub fn null_move( &self, piece: u8, pos: usize ) -> Move {
+        Move { piece: piece,
+               from: pos,
+               to: ERR_POS,
+               capture: EMPTY,
+               promotion: EMPTY,
+               en_passant: self.en_passant,
+               castling: self.castling,
+               halfmove_clock: self.halfmove_clock, }
+    }
+
     // All pseudo-legal moves for a given piece at a given pos, added to moves
     pub fn add_moves_from_bb( &self, piece: u8, pos: usize, moves_bb: &mut u64, moves: &mut Vec<Move> ) {
-        let mut mv = Move { piece: piece, from: pos, to: ERR_POS, capture: EMPTY, promotion: EMPTY };
+        let mut mv = self.null_move( piece, pos );
         let mut to: usize;
 
         if mv.is_promotion() {
@@ -980,12 +1000,12 @@ impl State {
         } else {
             let mut nodes: u64 = 0;
             let mut nodes_child: u64;
-            let irs = self.ir_state();
+            let control = self.control();
 
             for mv in &legal_moves {
                 self.make( mv );
                 nodes_child = self.perft( depth - 1, false );
-                self.unmake( mv, &irs );
+                self.unmake( mv, &control );
 
                 if divide {
                     println!( "{}{}: {}", offset_to_algebraic( mv.from ), offset_to_algebraic( mv.to ), nodes_child );
