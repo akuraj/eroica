@@ -42,9 +42,16 @@ use movegen::*;
 use rand::{ Rng, thread_rng };
 
 fn main() {
-    //let fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - -"; // Kiwipete
-
-    let fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - -";
+    //let fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - -"; // Kiwipete, until 5
+    // let fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - -"; // until 7
+    // let fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"; // until 6
+    // let fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"; // until 6 - MIRROR OF THE ABOVE
+    // let fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"; // until 5, apparently this was hard? meh..
+    // let fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"; // checks out until 6 - very slow...
+    // let fen = "8/p7/8/1P6/K1k3p1/6P1/7P/8 w - - - -"; // until 8
+    // let fen = "r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq - - -"; // until 6
+    // let fen = "8/5p2/8/2k3P1/p3K3/8/1P6/8 b - - - -"; // until 8
+    let fen = "r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R b KQkq - - -"; // until 6
     let mut state = State::generate_state_from_fen( fen );
 
     /*
@@ -70,7 +77,7 @@ fn main() {
     println!( "{}", state.fen() );
     println!( "{}", state );
 
-    let depth: usize = 7;
+    let depth: usize = 6;
     let t1 = precise_time_ns();
     let perft_val = state.perft( depth, true );
     let t2 = precise_time_ns();
