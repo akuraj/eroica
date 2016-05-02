@@ -521,6 +521,25 @@ impl State {
             _ => {},
         }
 
+        // Rook Capture (update Castling)
+        match mv.capture {
+            WHITE_ROOK => {
+                match mv.to {
+                    0 => self.castling &= !WQ_CASTLE,
+                    7 => self.castling &= !WK_CASTLE,
+                    _ => {},
+                }
+            },
+            BLACK_ROOK => {
+                match mv.to {
+                    56 => self.castling &= !BQ_CASTLE,
+                    63 => self.castling &= !BK_CASTLE,
+                    _ => {},
+                }
+            },
+            _ => {},
+        }
+
         self.bit_board.set_all(); // update 'ALL' bit_boards
         self.en_passant = new_ep; // set en_passant
         self.to_move ^= COLOR; // set side
@@ -738,7 +757,7 @@ impl State {
         let king_pos = king.trailing_zeros() as usize;
         let friends = self.bit_board[ side | ALL ];
         let enemies = self.bit_board[ opp_side | ALL ];
-        
+
         // NOTE: We are computing attacks of enemy pieces.
         // So, the king, if in check is going to be blocking some sliding piece attacks, and we need to account for that.
         // This wouldn't come up when computing control of friendlies, because, if it's my move, then the enemy king can't be in check..

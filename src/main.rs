@@ -42,32 +42,23 @@ use movegen::*;
 use rand::{ Rng, thread_rng };
 
 fn main() {
-    let mut state = State::new_game();
+    //let fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - -"; // Kiwipete
+
+    let fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - -";
+    let mut state = State::generate_state_from_fen( fen );
 
     /*
-    let mv = Move { piece: WHITE_PAWN, from: algebraic_to_offset( "d2" ), to: algebraic_to_offset( "d4" ), capture: EMPTY, promotion: EMPTY };
+    let mv = Move { piece: WHITE_KNIGHT, from: algebraic_to_offset( "e5" ), to: algebraic_to_offset( "g6" ), capture: BLACK_PAWN, promotion: EMPTY };
     state.make( &mv );
 
-    let mv = Move { piece: BLACK_KNIGHT, from: algebraic_to_offset( "b8" ), to: algebraic_to_offset( "a6" ), capture: EMPTY, promotion: EMPTY };
-    state.make( &mv );
-
-    let mv = Move { piece: WHITE_KING, from: algebraic_to_offset( "e1" ), to: algebraic_to_offset( "d2" ), capture: EMPTY, promotion: EMPTY };
-    state.make( &mv );
-
-    let mv = Move { piece: BLACK_KNIGHT, from: algebraic_to_offset( "a6" ), to: algebraic_to_offset( "c5" ), capture: EMPTY, promotion: EMPTY };
-    state.make( &mv );
-
-    let mv = Move { piece: WHITE_PAWN, from: algebraic_to_offset( "d4" ), to: algebraic_to_offset( "c5" ), capture: BLACK_KNIGHT, promotion: EMPTY };
-    state.make( &mv );
-
-    let mv = Move { piece: BLACK_PAWN, from: algebraic_to_offset( "d7" ), to: algebraic_to_offset( "d5" ), capture: EMPTY, promotion: EMPTY };
+    let mv = Move { piece: BLACK_QUEEN, from: algebraic_to_offset( "e7" ), to: algebraic_to_offset( "c5" ), capture: EMPTY, promotion: EMPTY };
     state.make( &mv );
     */
 
     println!( "{}", state.fen() );
     println!( "{}", state );
 
-    let depth: usize = 7;
+    let depth: usize = 5;
     let t1 = precise_time_ns();
     let perft_val = state.perft( depth, true );
     let t2 = precise_time_ns();
