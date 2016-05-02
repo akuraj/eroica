@@ -51,7 +51,9 @@ fn main() {
     // let fen = "8/p7/8/1P6/K1k3p1/6P1/7P/8 w - - - -"; // until 8
     // let fen = "r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq - - -"; // until 6
     // let fen = "8/5p2/8/2k3P1/p3K3/8/1P6/8 b - - - -"; // until 8
-    let fen = "r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R b KQkq - - -"; // until 6
+    // let fen = "r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R b KQkq - - -"; // until 6
+
+    let fen = START_FEN;
     let mut state = State::generate_state_from_fen( fen );
 
     /*
@@ -81,7 +83,7 @@ fn main() {
     let t1 = precise_time_ns();
     let perft_val = state.perft( depth, true );
     let t2 = precise_time_ns();
-    println!( "Perft( {} ): {}", depth, perft_val );
+    println!( "Perft {}: {}", depth, perft_val );
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 
     //println!( "Speed: {} MNPS", ( ( loop_size as f32 * moves.len() as f32 ) / ( ( ( t2 - t1 ) as f32 ) / 1e9 ) ) / 1e6 );
