@@ -140,7 +140,6 @@ pub struct IRState {
     pub num_checks: u8,
     pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
-    pub node_info: NodeInfo,
 }
 
 // Full state
@@ -160,7 +159,6 @@ pub struct State {
     pub check_blocker: u64,
     pub a_pins: [ u64; 64 ],
 
-    pub node_info: NodeInfo,
     // repetition table
     // hash
     // other bb items
@@ -179,8 +177,7 @@ impl Default for State {
                 attacked: 0,
                 num_checks: 0,
                 check_blocker: FULL_BOARD,
-                a_pins: [ FULL_BOARD; 64 ],
-                node_info: NodeInfo { ..Default::default() }, }
+                a_pins: [ FULL_BOARD; 64 ], }
     }
 }
 
@@ -325,8 +322,7 @@ impl State {
             }
         }
 
-        state.update_ad();
-        state.node_info = NodeInfo { ..Default::default() };
+        state.update_control();
 
         // FIXME: Implement a state check
 
@@ -408,8 +404,7 @@ impl State {
                  attacked: self.attacked,
                  num_checks: self.num_checks,
                  check_blocker: self.check_blocker,
-                 a_pins: self.a_pins,
-                 node_info: self.node_info.clone() }
+                 a_pins: self.a_pins, }
     }
 
     pub fn set_ir_state( &mut self, irs: &IRState ) {
@@ -420,7 +415,6 @@ impl State {
         self.num_checks = irs.num_checks;
         self.check_blocker = irs.check_blocker;
         self.a_pins = irs.a_pins;
-        self.node_info = irs.node_info.clone();
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -551,8 +545,7 @@ impl State {
         if side == BLACK { self.fullmove_count += 1; } // update fullmove_count
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
-        self.update_ad();
-        self.node_info = NodeInfo { ..Default::default() };
+        self.update_control();
 
         // update repetition table
         // update other blah
@@ -763,7 +756,7 @@ impl State {
         moves
     }
 
-    pub fn update_ad( &mut self ) {
+    pub fn update_control( &mut self ) {
         // Updates the attack and defend information ---
         // Computes the following
         // attacked: all the squares attacked by enemies (including enemy pieces, which are 'defended')
@@ -963,31 +956,18 @@ impl State {
         }
     }
 
-    pub fn update_node_info( &mut self ) {
-        if self.node_info.status == Status::Unknown {
-            let moves = self.moves();
+    pub fn legal_moves( &self ) -> Vec<Move> {
+        let moves = self.moves();
 
-            // Hmm, this is faster than both (by ~25%) -
-            // 1. legal_moves = moves.into_iter().filter( |x| self.is_legal( &x ) ).collect();
-            // 2. legal_moves = moves.iter().filter( |x| self.is_legal( x ) ).map( |x| *x ).collect();
-            let mut legal_moves: Vec<Move> = Vec::new();
-            for mv in &moves {
-                if self.is_legal( mv ) { legal_moves.push( *mv ); }
-            }
-
-            self.node_info.status = match ( legal_moves.len() == 0, self.num_checks > 0 ) {
-                ( false, _ ) => Status::Ongoing,
-                ( true, false ) => Status::Stalemate,
-                ( true, true ) => Status::Checkmate,
-            };
-
-            self.node_info.legal_moves = legal_moves;
+        // Hmm, this is faster than both (by ~25%) -
+        // 1. legal_moves = moves.into_iter().filter( |x| self.is_legal( &x ) ).collect();
+        // 2. legal_moves = moves.iter().filter( |x| self.is_legal( x ) ).map( |x| *x ).collect();
+        let mut legal_moves: Vec<Move> = Vec::new();
+        for mv in &moves {
+            if self.is_legal( mv ) { legal_moves.push( *mv ); }
         }
-    }
 
-    pub fn legal_moves( &mut self ) -> Vec<Move> {
-        self.update_node_info();
-        self.node_info.legal_moves.clone()
+        legal_moves
     }
 
     pub fn perft( &mut self, depth: usize, divide: bool ) -> u64 {
