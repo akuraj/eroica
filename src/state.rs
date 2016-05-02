@@ -106,8 +106,24 @@ impl Move {
         }
     }
 
-    pub fn is_ep( &self, en_passant: usize ) -> bool {
-        ( self.piece & PAWN != 0 ) && ( self.to == en_passant )
+    pub fn is_ep( &self ) -> bool {
+        ( self.piece & PAWN != 0 ) && ( self.to == self.en_passant )
+    }
+
+    pub fn ep_target( &self ) -> usize {
+        match ( self.piece & COLOR, self.is_ep() ) {
+            ( WHITE, true ) => self.en_passant - 8,
+            ( BLACK, true ) => self.en_passant + 8,
+            _ => ERR_POS,
+        }
+    }
+
+    pub fn ep_target_bb( &self ) -> u64 {
+        if self.is_ep() {
+            1u64 << self.ep_target()
+        } else {
+            0
+        }
     }
 
     // A bb of what changed :)
@@ -116,7 +132,7 @@ impl Move {
     }
 
     pub fn move_bb_w_ep( &self ) -> u64 {
-        0u64
+        self.move_bb() | self.ep_target_bb()
     }
 }
 

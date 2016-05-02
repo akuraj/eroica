@@ -42,9 +42,9 @@ use movegen::*;
 use rand::{ Rng, thread_rng };
 
 fn main() {
-    // let fen = START_FEN; // until 7
+    let fen = START_FEN; // until 7
     // let fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - -"; // Kiwipete, until 5
-    let fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - -"; // until 7
+    // let fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - -"; // until 7
     // let fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"; // until 6
     // let fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"; // until 6 - MIRROR OF THE ABOVE
     // let fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"; // until 5, apparently this was hard? meh..
@@ -79,7 +79,7 @@ fn main() {
     println!( "{}", state.fen() );
     println!( "{}", state );
 
-    let depth: usize = 7;
+    let depth: usize = 6;
     let t1 = precise_time_ns();
     let perft_val = state.perft( depth, true );
     let t2 = precise_time_ns();
