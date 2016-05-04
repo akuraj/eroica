@@ -52,7 +52,7 @@ impl BitBoard {
 }
 
 // Move
-#[ derive( Copy, Clone, Debug, PartialEq ) ]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Move {
     pub piece: u8,
     pub from: usize,
@@ -137,7 +137,7 @@ impl Move {
 }
 
 // Game status enum
-#[ derive( Copy, Clone, Debug, PartialEq ) ]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub enum Status {
     Unknown,
     Ongoing,
@@ -146,7 +146,7 @@ pub enum Status {
 }
 
 // NodeInfo
-#[ derive( Clone, Debug ) ]
+#[derive(Clone,Debug)]
 pub struct NodeInfo {
     pub status: Status,
     pub legal_moves: Vec<Move>,

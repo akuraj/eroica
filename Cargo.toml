@@ -6,3 +6,12 @@ authors = [ "Jayakiran Akurathi <Jayakiran.Akurathi@gmail.com>" ]
 [dependencies]
 rand = "*"
 time = "*"
+
+[profile.test]
+opt-level = 3
+
+[profile.bench]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
