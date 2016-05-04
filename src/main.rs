@@ -23,15 +23,17 @@
 /*
 cargo rustc --release -- -C target-feature=+popcnt -C target-cpu=native
 */
-
+#![ feature( test ) ]
 extern crate rand;
 extern crate time;
+extern crate test;
 
 pub mod consts;
 pub mod state;
 pub mod utils;
 pub mod magics;
 pub mod movegen;
+pub mod testing;
 
 use consts::*;
 use state::*;
