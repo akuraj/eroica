@@ -80,3 +80,9 @@ pub fn perftsuite_lean() {
 pub fn perftsuite() {
     run_perft( "testing/perftsuite.epd" );
 }
+
+#[test]
+#[ignore]
+pub fn perftsuite_other() {
+    run_perft( "testing/perftsuite_other.epd" );
+}
