@@ -101,33 +101,9 @@ impl Move {
         }
     }
 
-    pub fn is_ep( &self, en_passant: usize ) -> bool {
-        ( self.piece & PAWN != 0 ) && ( self.to == en_passant )
-    }
-
-    pub fn ep_target( &self, en_passant: usize ) -> usize {
-        match ( self.piece & COLOR, self.is_ep( en_passant ) ) {
-            ( WHITE, true ) => en_passant - 8,
-            ( BLACK, true ) => en_passant + 8,
-            _ => ERR_POS,
-        }
-    }
-
-    pub fn ep_target_bb( &self, en_passant: usize ) -> u64 {
-        if self.is_ep( en_passant ) {
-            1u64 << self.ep_target( en_passant )
-        } else {
-            0
-        }
-    }
-
-    // A bb of what changed :)
+    // A bb of what changed - ignoring en_passant
     pub fn move_bb( &self ) -> u64 {
         ( 1u64 << self.from ) | ( 1u64 << self.to )
-    }
-
-    pub fn move_bb_w_ep( &self, en_passant: usize ) -> u64 {
-        self.move_bb() | self.ep_target_bb( en_passant )
     }
 }
 
@@ -1061,7 +1037,7 @@ impl State {
             }
         }
     }
-    
+
     pub fn is_legal( &self, mv: &Move ) -> bool {
         let castling_path = mv.castling_path(); // zero if not castling
         if castling_path != 0 {
