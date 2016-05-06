@@ -335,10 +335,65 @@ impl State {
         }
 
         state.compute_control();
-
-        // FIXME: Implement a state check
+        state.state_check();
 
         state
+    }
+
+    pub fn state_check( &self ) {
+        // Very basic checks -> does not assert that the position is a child of START_FEN (can be reached from the initial position)
+        // Sufficient for the engine to play
+
+        // Check number of kings
+        assert_eq!( self.bit_board[ WHITE | KING ].count_ones(), 1 );
+        assert_eq!( self.bit_board[ BLACK | KING ].count_ones(), 1 );
+
+        // Check that opposing king is not in check if it's our move
+        assert_eq!( self.defended & self.bit_board[ ( self.to_move ^ COLOR ) | KING ], 0 );
+
+        // castling
+        if self.castling & W_CASTLE != 0 {
+            assert_eq!( self.simple_board[ 4 ], WHITE_KING );
+
+            if self.castling & WK_CASTLE != 0 {
+                assert_eq!( self.simple_board[ 7 ], WHITE_ROOK );
+            }
+
+            if self.castling & WQ_CASTLE != 0 {
+                assert_eq!( self.simple_board[ 0 ], WHITE_ROOK );
+            }
+        }
+
+        if self.castling & B_CASTLE != 0 {
+            assert_eq!( self.simple_board[ 60 ], BLACK_KING );
+
+            if self.castling & BK_CASTLE != 0 {
+                assert_eq!( self.simple_board[ 63 ], BLACK_ROOK );
+            }
+
+            if self.castling & BQ_CASTLE != 0 {
+                assert_eq!( self.simple_board[ 56 ], BLACK_ROOK );
+            }
+        }
+
+        // en_passant
+        if self.en_passant != ERR_POS {
+            match self.to_move {
+                WHITE => {
+                    assert_eq!( self.en_passant / 8, 5 );
+                    assert_eq!( self.simple_board[ self.en_passant - 8 ], BLACK_PAWN );
+                    assert_eq!( self.simple_board[ self.en_passant ], EMPTY );
+                    assert_eq!( self.simple_board[ self.en_passant + 8 ], EMPTY );
+                },
+                BLACK => {
+                    assert_eq!( self.en_passant / 8, 2 );
+                    assert_eq!( self.simple_board[ self.en_passant + 8 ], WHITE_PAWN );
+                    assert_eq!( self.simple_board[ self.en_passant ], EMPTY );
+                    assert_eq!( self.simple_board[ self.en_passant - 8 ], EMPTY );
+                },
+                _ => {},
+            }
+        }
     }
 
     pub fn fen( &self ) -> String {
