@@ -460,11 +460,6 @@ impl State {
     pub fn make( &mut self, mv: &Move ) {
         let side = self.to_move;
 
-        if mv.capture == ( ( side ^ COLOR ) | KING ) {
-            print!( "{}", *self );
-            println!( "{:?}", mv );
-        }
-
         // Update simple_board and bit_board
         self.simple_board[ mv.from ] = EMPTY;
         self.simple_board[ mv.to ] = mv.piece;
