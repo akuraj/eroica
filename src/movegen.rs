@@ -93,7 +93,7 @@ impl MoveGen {
     }
 
     pub fn k_moves( &self, pos: usize, color: u8, occupancy: u64, castling: u8 ) -> u64 {
-        let mut moves = self.king_attacks[ pos ];
+        let mut moves = self.k_captures( pos );
 
         match ( color, pos ) {
             ( WHITE, 4 ) => {
