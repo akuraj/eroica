@@ -1,11 +1,9 @@
-//#![cfg(test)]
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::File;
 use std::str::FromStr;
 use state::*;
 use time::*;
-//use test::Bencher;
 
 #[derive(Debug)]
 pub struct PerftResultItem {

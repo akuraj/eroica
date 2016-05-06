@@ -59,11 +59,6 @@ pub struct Move {
     pub to: usize,
     pub capture: u8,
     pub promotion: u8,
-
-    // Irreversible State
-    pub castling: u8,
-    pub en_passant: usize, // Store the pos (square address)
-    pub halfmove_clock: u8,
 }
 
 impl Move {
@@ -106,21 +101,21 @@ impl Move {
         }
     }
 
-    pub fn is_ep( &self ) -> bool {
-        ( self.piece & PAWN != 0 ) && ( self.to == self.en_passant )
+    pub fn is_ep( &self, en_passant: usize ) -> bool {
+        ( self.piece & PAWN != 0 ) && ( self.to == en_passant )
     }
 
-    pub fn ep_target( &self ) -> usize {
-        match ( self.piece & COLOR, self.is_ep() ) {
-            ( WHITE, true ) => self.en_passant - 8,
-            ( BLACK, true ) => self.en_passant + 8,
+    pub fn ep_target( &self, en_passant: usize ) -> usize {
+        match ( self.piece & COLOR, self.is_ep( en_passant ) ) {
+            ( WHITE, true ) => en_passant - 8,
+            ( BLACK, true ) => en_passant + 8,
             _ => ERR_POS,
         }
     }
 
-    pub fn ep_target_bb( &self ) -> u64 {
-        if self.is_ep() {
-            1u64 << self.ep_target()
+    pub fn ep_target_bb( &self, en_passant: usize ) -> u64 {
+        if self.is_ep( en_passant ) {
+            1u64 << self.ep_target( en_passant )
         } else {
             0
         }
@@ -131,8 +126,8 @@ impl Move {
         ( 1u64 << self.from ) | ( 1u64 << self.to )
     }
 
-    pub fn move_bb_w_ep( &self ) -> u64 {
-        self.move_bb() | self.ep_target_bb()
+    pub fn move_bb_w_ep( &self, en_passant: usize ) -> u64 {
+        self.move_bb() | self.ep_target_bb( en_passant )
     }
 }
 
@@ -159,16 +154,25 @@ impl Default for NodeInfo {
     }
 }
 
-// Irreversible State - and also attack and defend info - which is expensive to recalc
-pub struct Control {
+// Irreversible State - and also Control info, which is expensive to recalc
+pub struct IRState {
+    // IRState
+    pub castling: u8,
+    pub en_passant: usize, // Store the pos (square address)
+    pub halfmove_clock: u8,
+
+    // Control
     pub attacked: u64,
     pub num_checks: u8,
     pub check_blocker: u64,
+    pub defended: u64,
     pub a_pins: [ u64; 64 ],
+    pub control: [ u64; 64 ],
 }
 
-// Full state
+// Full State
 pub struct State {
+    // State (the board) + IRState
     pub simple_board: SimpleBoard,
     pub bit_board: BitBoard,
     pub to_move: u8,
@@ -177,12 +181,17 @@ pub struct State {
     pub halfmove_clock: u8,
     pub fullmove_count: u8, // Starts a 1 (First Move)
 
+    // Move Generator
     pub mg: MoveGen,
 
+    // Control
     pub attacked: u64,
     pub num_checks: u8,
     pub check_blocker: u64,
+    pub defended: u64,
     pub a_pins: [ u64; 64 ],
+    pub control: [ u64; 64 ],
+
 
     // repetition table
     // hash
@@ -202,7 +211,9 @@ impl Default for State {
                 attacked: 0,
                 num_checks: 0,
                 check_blocker: FULL_BOARD,
-                a_pins: [ FULL_BOARD; 64 ], }
+                defended: 0,
+                a_pins: [ FULL_BOARD; 64 ],
+                control: [ 0; 64 ], }
     }
 }
 
@@ -347,7 +358,7 @@ impl State {
             }
         }
 
-        state.update_control();
+        state.compute_control();
 
         // FIXME: Implement a state check
 
@@ -422,24 +433,28 @@ impl State {
         State::generate_state_from_fen( START_FEN )
     }
 
-    pub fn set_ir_state( &mut self, mv: &Move ) {
-        self.castling = mv.castling;
-        self.en_passant = mv.en_passant;
-        self.halfmove_clock = mv.halfmove_clock;
+    pub fn set_ir_state( &mut self, irs: &IRState ) {
+        self.castling = irs.castling;
+        self.en_passant = irs.en_passant;
+        self.halfmove_clock = irs.halfmove_clock;
+        self.attacked = irs.attacked;
+        self.num_checks = irs.num_checks;
+        self.check_blocker = irs.check_blocker;
+        self.defended = irs.defended;
+        self.a_pins = irs.a_pins;
+        self.control = irs.control;
     }
 
-    pub fn control( &self ) -> Control {
-        Control{ attacked: self.attacked,
+    pub fn ir_state( &self ) -> IRState {
+        IRState{ castling: self.castling,
+                 en_passant: self.en_passant,
+                 halfmove_clock: self.halfmove_clock,
+                 attacked: self.attacked,
                  num_checks: self.num_checks,
                  check_blocker: self.check_blocker,
-                 a_pins: self.a_pins, }
-    }
-
-    pub fn set_control( &mut self, control: &Control ) {
-        self.attacked = control.attacked;
-        self.num_checks = control.num_checks;
-        self.check_blocker = control.check_blocker;
-        self.a_pins = control.a_pins;
+                 defended: self.defended,
+                 a_pins: self.a_pins,
+                 control: self.control, }
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -570,13 +585,13 @@ impl State {
         if side == BLACK { self.fullmove_count += 1; } // update fullmove_count
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
-        self.update_control();
+        self.compute_control();
 
         // update repetition table
         // update other blah
     }
 
-    pub fn unmake( &mut self, mv: &Move, control: &Control ) {
+    pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
         let side = self.to_move ^ COLOR; // side that just moved
 
         // Update simple_board and bit_board
@@ -591,7 +606,7 @@ impl State {
                 if mv.is_promotion() {
                     self.bit_board[ WHITE_PAWN ] ^= 1u64 << mv.to;
                     self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
-                } else if mv.en_passant == mv.to {
+                } else if irs.en_passant == mv.to {
                     self.simple_board[ mv.to - 8 ] = BLACK_PAWN;
                     self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
                 }
@@ -615,7 +630,7 @@ impl State {
                 if mv.is_promotion() {
                     self.bit_board[ BLACK_PAWN ] ^= 1u64 << mv.to;
                     self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
-                } else if mv.en_passant == mv.to {
+                } else if irs.en_passant == mv.to {
                     self.simple_board[ mv.to + 8 ] = WHITE_PAWN;
                     self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
                 }
@@ -638,8 +653,7 @@ impl State {
             _ => {},
         }
 
-        self.set_ir_state( mv );
-        self.set_control( control );
+        self.set_ir_state( irs );
 
         self.bit_board.set_all(); // update 'ALL' bit_boards
         self.to_move ^= COLOR; // set side
@@ -682,10 +696,7 @@ impl State {
                from: pos,
                to: ERR_POS,
                capture: EMPTY,
-               promotion: EMPTY,
-               en_passant: self.en_passant,
-               castling: self.castling,
-               halfmove_clock: self.halfmove_clock, }
+               promotion: EMPTY, }
     }
 
     // All pseudo-legal moves for a given piece at a given pos, added to moves
@@ -792,13 +803,273 @@ impl State {
         moves
     }
 
-    pub fn update_control( &mut self ) {
-        // Updates the attack and defend information ---
-        // Computes the following
-        // attacked: all the squares attacked by enemies (including enemy pieces, which are 'defended')
-        // num_checks
-        // checks: all the squares that I can send a piece to, to block check
-        // a_pins: absolute pins
+    pub fn compute_control( &mut self ) {
+        self.attacked = 0;
+        self.num_checks = 0;
+        self.check_blocker = FULL_BOARD;
+        self.defended = 0;
+        self.a_pins = [ FULL_BOARD; 64 ];
+        self.control = [ 0; 64 ];
+
+        let side = self.to_move;
+        let opp_side = side ^ COLOR;
+        let king = self.bit_board[ side | KING ];
+        let king_pos = king.trailing_zeros() as usize;
+        let opp_king = self.bit_board[ opp_side | KING ];
+        let opp_king_pos = opp_king.trailing_zeros() as usize;
+        let friends = self.bit_board[ side | ALL ];
+        let enemies = self.bit_board[ opp_side | ALL ];
+        let occupancy = friends | enemies;
+
+        // So, the king, if in check is going to be blocking some sliding piece attacks, and we need to account for that.
+        // This wouldn't come up when computing control of friendlies, because, if it's my move, then the enemy king can't be in check..
+        let occupancy_wo_king = occupancy ^ king;
+        let occupancy_wo_opp_king = occupancy ^ opp_king;
+
+        let mut bb: u64;
+        let mut pos: usize;
+        let mut o_attacks: u64;
+        let mut r_attacks: u64;
+        let mut b_attacks: u64;
+
+        /**** Enemies ****/
+
+        // ROOK & QUEEN - orthogonal attacks
+        bb = self.bit_board[ opp_side | ROOK ] | self.bit_board[ opp_side | QUEEN ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            r_attacks = self.mg.r_moves( pos, occupancy_wo_king );
+            self.control[ pos ] |= r_attacks;
+            self.attacked |= r_attacks;
+
+            if r_attacks & king != 0 {
+                self.num_checks += 1;
+                self.check_blocker &= line_segment( pos, king_pos ) ^ king;
+            }
+        }
+
+        // BISHOP & QUEEN - diagonal attacks
+        bb = self.bit_board[ opp_side | BISHOP ] | self.bit_board[ opp_side | QUEEN ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            b_attacks = self.mg.b_moves( pos, occupancy_wo_king );
+            self.control[ pos ] |= b_attacks;
+            self.attacked |= b_attacks;
+
+            if b_attacks & king != 0 {
+                self.num_checks += 1;
+                self.check_blocker &= line_segment( pos, king_pos ) ^ king;
+            }
+        }
+
+        // KNIGHT
+        bb = self.bit_board[ opp_side | KNIGHT ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.n_moves( pos );
+            self.control[ pos ] |= o_attacks;
+            self.attacked |= o_attacks;
+
+            if o_attacks & king != 0 {
+                self.num_checks += 1;
+                self.check_blocker &= 1u64 << pos;
+            }
+        }
+
+        // PAWN
+        bb = self.bit_board[ opp_side | PAWN ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.p_captures( pos, opp_side );
+            self.control[ pos ] |= o_attacks;
+            self.attacked |= o_attacks;
+
+            if o_attacks & king != 0 {
+                self.num_checks += 1;
+                self.check_blocker &= 1u64 << pos;
+            }
+        }
+
+        // KING
+        bb = self.bit_board[ opp_side | KING ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.k_captures( pos );
+            self.control[ pos ] |= o_attacks;
+            self.attacked |= o_attacks;
+        }
+
+        /**** Friends ****/
+
+        // ROOK & QUEEN - orthogonal attacks
+        bb = self.bit_board[ side | ROOK ] | self.bit_board[ side | QUEEN ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            r_attacks = self.mg.r_moves( pos, occupancy );
+            self.control[ pos ] |= r_attacks;
+            self.defended |= r_attacks;
+        }
+
+        // BISHOP & QUEEN - diagonal attacks
+        bb = self.bit_board[ side | BISHOP ] | self.bit_board[ side | QUEEN ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            b_attacks = self.mg.b_moves( pos, occupancy );
+            self.control[ pos ] |= b_attacks;
+            self.defended |= b_attacks;
+        }
+
+        // KNIGHT
+        bb = self.bit_board[ side | KNIGHT ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.n_moves( pos );
+            self.control[ pos ] |= o_attacks;
+            self.defended |= o_attacks;
+        }
+
+        // PAWN
+        bb = self.bit_board[ side | PAWN ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.p_captures( pos, side );
+            self.control[ pos ] |= o_attacks;
+            self.defended |= o_attacks;
+        }
+
+        // KING
+        bb = self.bit_board[ side | KING ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            o_attacks = self.mg.k_captures( pos );
+            self.control[ pos ] |= o_attacks;
+            self.defended |= o_attacks;
+        }
+
+        assert!( self.defended & opp_king == 0, "Enemy King is in check - it could be Checkmate - or the last move was illegal!" );
+
+        /**** Pins ****/
+
+        let mut vision: u64;
+        let mut possibly_pinned: u64;
+        let mut possibly_attacking: u64;
+        let mut pinners: u64;
+        let mut pinned_pos: usize;
+        let mut pin: u64;
+
+        /* Diagonal pins */
+
+        // Our King
+        vision = self.mg.b_moves( king_pos, occupancy_wo_king );
+        possibly_pinned = vision & friends;
+        if possibly_pinned != 0 {
+            possibly_attacking = vision & enemies;
+            pinners = self.mg.b_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
+                      ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] ) & !possibly_attacking );
+            while pinners != 0 {
+                pos = pop_lsb_pos( &mut pinners );
+                pin = line_segment( pos, king_pos ) ^ king;
+                pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+                self.a_pins[ pinned_pos ] &= pin;
+            }
+        }
+
+        // Enemy King
+        vision = self.mg.b_moves( opp_king_pos, occupancy_wo_opp_king );
+        possibly_pinned = vision & enemies;
+        if possibly_pinned != 0 {
+            pinners = self.mg.b_moves( opp_king_pos, occupancy_wo_opp_king ^ possibly_pinned ) &
+                      ( self.bit_board[ side | QUEEN ] | self.bit_board[ side | BISHOP ] );
+            while pinners != 0 {
+                pos = pop_lsb_pos( &mut pinners );
+                pin = line_segment( pos, opp_king_pos ) ^ opp_king;
+                pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+                self.a_pins[ pinned_pos ] &= pin;
+            }
+        }
+
+        /* Orthogonal pins */
+
+        // Our King
+        vision = self.mg.r_moves( king_pos, occupancy_wo_king );
+        possibly_pinned = vision & friends;
+        if possibly_pinned != 0 {
+            possibly_attacking = vision & enemies;
+            pinners = self.mg.r_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
+                      ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
+            while pinners != 0 {
+                pos = pop_lsb_pos( &mut pinners );
+                pin = line_segment( pos, king_pos ) ^ king;
+                pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+                self.a_pins[ pinned_pos ] &= pin;
+            }
+        }
+
+        // Enemy King
+        vision = self.mg.r_moves( opp_king_pos, occupancy_wo_opp_king );
+        possibly_pinned = vision & enemies;
+        if possibly_pinned != 0 {
+            pinners = self.mg.r_moves( opp_king_pos, occupancy_wo_opp_king ^ possibly_pinned ) &
+                      ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] );
+            while pinners != 0 {
+                pos = pop_lsb_pos( &mut pinners );
+                pin = line_segment( pos, opp_king_pos ) ^ opp_king;
+                pinned_pos = ( possibly_pinned & pin ).trailing_zeros() as usize;
+                self.a_pins[ pinned_pos ] &= pin;
+            }
+        }
+
+        // ep pins - the special stuff - can only happen to us (it's our move)
+        if self.ep_flag() {
+            let mut ep_killers = self.bit_board[ side | PAWN ] & self.mg.p_captures( self.en_passant, opp_side );
+            if ep_killers != 0 {
+                let ep_target = self.ep_target();
+                let ep_bb = self.ep_bb();
+
+                // Everything except EP, basically if EP capture leads to check, ban it!
+                pin = FULL_BOARD ^ ep_bb;
+
+                // Check if ep_target is diagonally pinned to our king
+                // Btw, it cannot be pinned orthogonally (unless both ep_killer and ep_target are horizontally pinned to our king, which is handled after this)
+                let mut ep_diag_pin = false;
+                vision = self.mg.b_moves( king_pos, occupancy_wo_king );
+                possibly_pinned = vision & ( 1u64 << ep_target );
+                if possibly_pinned != 0 {
+                    possibly_attacking = vision & enemies;
+                    pinners = self.mg.b_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
+                              ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | BISHOP ] ) & !possibly_attacking );
+                    if pinners != 0 { ep_diag_pin = true; }
+                }
+
+                if ep_diag_pin {
+                    while ep_killers != 0 {
+                        pinned_pos = pop_lsb_pos( &mut ep_killers );
+                        self.a_pins[ pinned_pos ] &= pin; // Everything except EP
+                    }
+                } else if king_pos / 8 == ep_target / 8 {
+                    // Check if the capturing pawn(s) are horizontally pinned to our king (can only be horizontal...)
+                    while ep_killers != 0 {
+                        pinned_pos = pop_lsb_pos( &mut ep_killers );
+                        let ep_apply: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target ) | ep_bb;
+                        vision = self.mg.r_moves( king_pos, occupancy_wo_king );
+                        if vision & ep_apply != 0 {
+                            possibly_attacking = vision & enemies;
+                            pinners = self.mg.r_moves( king_pos, occupancy_wo_king ^ ep_apply ) &
+                                      ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
+
+                            if pinners != 0 {
+                                self.a_pins[ pinned_pos ] &= pin;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+    pub fn update_control( &mut self, mv: &Move ) {
+        let move_bb = mv.move_bb_w_ep();
 
         self.attacked = 0;
         self.num_checks = 0;
@@ -971,7 +1242,7 @@ impl State {
             }
         }
     }
-
+    */
     pub fn is_legal( &self, mv: &Move ) -> bool {
         let castling_path = mv.castling_path(); // zero if not castling
         if castling_path != 0 {
@@ -1016,12 +1287,12 @@ impl State {
         } else {
             let mut nodes: u64 = 0;
             let mut nodes_child: u64;
-            let control = self.control();
+            let irs = self.ir_state();
 
             for mv in &legal_moves {
                 self.make( mv );
                 nodes_child = self.perft( depth - 1, false );
-                self.unmake( mv, &control );
+                self.unmake( mv, &irs );
 
                 if divide {
                     println!( "{}{}: {}", offset_to_algebraic( mv.from ), offset_to_algebraic( mv.to ), nodes_child );
