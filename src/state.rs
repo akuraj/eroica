@@ -144,6 +144,7 @@ pub struct IRState {
     pub defended: u64,
     pub a_pins: [ u64; 64 ],
     pub control: [ u64; 64 ],
+    pub ep_possible: bool,
 }
 
 // Full State
@@ -167,7 +168,7 @@ pub struct State {
     pub defended: u64,
     pub a_pins: [ u64; 64 ],
     pub control: [ u64; 64 ],
-
+    pub ep_possible: bool,
 
     // repetition table
     // hash
@@ -189,7 +190,8 @@ impl Default for State {
                 check_blocker: FULL_BOARD,
                 defended: 0,
                 a_pins: [ FULL_BOARD; 64 ],
-                control: [ 0; 64 ], }
+                control: [ 0; 64 ],
+                ep_possible: false, }
     }
 }
 
@@ -474,6 +476,7 @@ impl State {
         self.defended = irs.defended;
         self.a_pins = irs.a_pins;
         self.control = irs.control;
+        self.ep_possible = irs.ep_possible;
     }
 
     pub fn ir_state( &self ) -> IRState {
@@ -485,7 +488,8 @@ impl State {
                  check_blocker: self.check_blocker,
                  defended: self.defended,
                  a_pins: self.a_pins,
-                 control: self.control, }
+                 control: self.control,
+                 ep_possible: self.ep_possible, }
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -836,6 +840,7 @@ impl State {
         self.defended = 0;
         self.a_pins = [ FULL_BOARD; 64 ];
         self.control = [ 0; 64 ];
+        self.ep_possible = false;
 
         let side = self.to_move;
         let opp_side = side ^ COLOR;
@@ -1049,8 +1054,10 @@ impl State {
         if self.ep_flag() {
             let mut ep_killers = self.bit_board[ side | PAWN ] & self.mg.p_captures( self.en_passant, opp_side );
             if ep_killers != 0 {
+                self.ep_possible = true; // tentatively
                 let ep_target = self.ep_target();
                 let ep_bb = self.ep_bb();
+                let ep_target_bb: u64 = 1 << ep_target;
 
                 // Everything except EP, basically if EP capture leads to check, ban it!
                 pin = FULL_BOARD ^ ep_bb;
@@ -1059,7 +1066,7 @@ impl State {
                 // Btw, it cannot be pinned orthogonally (unless both ep_killer and ep_target are horizontally pinned to our king, which is handled after this)
                 let mut ep_diag_pin = false;
                 vision = self.mg.b_moves( king_pos, occupancy_wo_king );
-                possibly_pinned = vision & ( 1 << ep_target );
+                possibly_pinned = vision & ep_target_bb;
                 if possibly_pinned != 0 {
                     possibly_attacking = vision & enemies;
                     pinners = self.mg.b_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
@@ -1068,6 +1075,7 @@ impl State {
                 }
 
                 if ep_diag_pin {
+                    self.ep_possible = false;
                     while ep_killers != 0 {
                         pinned_pos = pop_lsb_pos( &mut ep_killers );
                         self.a_pins[ pinned_pos ] &= pin; // Everything except EP
@@ -1076,7 +1084,7 @@ impl State {
                     // Check if the capturing pawn(s) are horizontally pinned to our king (can only be horizontal...)
                     while ep_killers != 0 {
                         pinned_pos = pop_lsb_pos( &mut ep_killers );
-                        let ep_apply: u64 = ( 1 << pinned_pos ) | ( 1 << ep_target ) | ep_bb;
+                        let ep_apply: u64 = ( 1 << pinned_pos ) | ep_target_bb | ep_bb;
                         vision = self.mg.r_moves( king_pos, occupancy_wo_king );
                         if vision & ep_apply != 0 {
                             possibly_attacking = vision & enemies;
@@ -1084,9 +1092,36 @@ impl State {
                                       ( ( self.bit_board[ opp_side | QUEEN ] | self.bit_board[ opp_side | ROOK ] ) & !possibly_attacking );
 
                             if pinners != 0 {
+                                self.ep_possible = false;
                                 self.a_pins[ pinned_pos ] &= pin;
                             }
                         }
+                    }
+                }
+
+                if self.ep_possible {
+                    // No ep pins... let's see if the king is in check...
+                    if self.num_checks > 0 {
+                        // Can only be exactly ONE check
+                        // Two possibilities -
+                        // 1. Discovered check - CAN'T EP!
+                        // 2. The pawn that just moved is checking the king - CAN EP!
+
+                        if self.check_blocker & ( 1 << ep_target ) == 0 {
+                            // No. 1
+                            self.ep_possible = false;
+                        }
+                    } else {
+                        // No ep pins AND king is not in check
+                        // Let's check for natural pins that may be blocking ep capture
+                        let mut ep_killers = self.bit_board[ side | PAWN ] & self.mg.p_captures( self.en_passant, opp_side );
+                        let mut nat_pin: bool = true;
+                        while ep_killers != 0 {
+                            pos = pop_lsb_pos( &mut ep_killers );
+                            nat_pin = nat_pin && ( ( self.check_blocker & self.a_pins[ pos ] & ep_bb ) == 0 );
+                        }
+
+                        self.ep_possible = !nat_pin;
                     }
                 }
             }
@@ -1104,7 +1139,7 @@ impl State {
                 false // Double check, only the King can move
             } else {
                 if mv.piece == ( self.to_move | PAWN ) && self.ep_flag() && ( self.check_blocker & self.ep_target_bb() != 0 ) {
-                    // Enemy pawn checking our king can be capture en passant by my pawns
+                    // Enemy pawn checking our king can be captured en passant by my pawns
                     ( ( self.check_blocker | self.ep_bb() ) & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
                 } else {
                     ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
