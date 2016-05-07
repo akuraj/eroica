@@ -103,7 +103,7 @@ impl Move {
 
     // A bb of what changed - ignoring en_passant
     pub fn move_bb( &self ) -> u64 {
-        ( 1u64 << self.from ) | ( 1u64 << self.to )
+        ( 1 << self.from ) | ( 1 << self.to )
     }
 }
 
@@ -495,7 +495,7 @@ impl State {
         self.simple_board[ mv.from ] = EMPTY;
         self.simple_board[ mv.to ] = mv.piece;
         self.bit_board[ mv.piece ] ^= mv.move_bb();
-        if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
+        if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1 << mv.to; }
 
         // Update castling state and en_passant; handle promotion
         // Update simple_board and bit_board for Rook if castling
@@ -504,15 +504,15 @@ impl State {
             WHITE_PAWN => {
                 if mv.is_promotion() {
                     self.simple_board[ mv.to ] = mv.promotion;
-                    self.bit_board[ WHITE_PAWN ] ^= 1u64 << mv.to;
-                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                    self.bit_board[ WHITE_PAWN ] ^= 1 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1 << mv.to;
                 } else {
                     match mv.to - mv.from {
                         16 => { new_ep = mv.from + 8; }, // forward_2, set en_passant capture
                         _ => {
                             if self.en_passant == mv.to {
                                 self.simple_board[ mv.to - 8 ] = EMPTY;
-                                self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
+                                self.bit_board[ BLACK_PAWN ] ^= 1 << ( mv.to - 8 );
                             }
                         },
                     }
@@ -545,15 +545,15 @@ impl State {
             BLACK_PAWN => {
                 if mv.is_promotion() {
                     self.simple_board[ mv.to ] = mv.promotion;
-                    self.bit_board[ BLACK_PAWN ] ^= 1u64 << mv.to;
-                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                    self.bit_board[ BLACK_PAWN ] ^= 1 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1 << mv.to;
                 } else {
                     match mv.from - mv.to {
                         16 => { new_ep = mv.to + 8; }, // forward_2, set en_passant capture
                         _ => {
                             if self.en_passant == mv.to {
                                 self.simple_board[ mv.to + 8 ] = EMPTY;
-                                self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
+                                self.bit_board[ WHITE_PAWN ] ^= 1 << ( mv.to + 8 );
                             }
                         },
                     }
@@ -624,17 +624,17 @@ impl State {
         self.simple_board[ mv.from ] = mv.piece;
         self.simple_board[ mv.to ] = mv.capture;
         self.bit_board[ mv.piece ] ^= mv.move_bb();
-        if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1u64 << mv.to; }
+        if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1 << mv.to; }
 
         // Undo castling and en_passant
         match mv.piece {
             WHITE_PAWN => {
                 if mv.is_promotion() {
-                    self.bit_board[ WHITE_PAWN ] ^= 1u64 << mv.to;
-                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                    self.bit_board[ WHITE_PAWN ] ^= 1 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1 << mv.to;
                 } else if irs.en_passant == mv.to {
                     self.simple_board[ mv.to - 8 ] = BLACK_PAWN;
-                    self.bit_board[ BLACK_PAWN ] ^= 1u64 << ( mv.to - 8 );
+                    self.bit_board[ BLACK_PAWN ] ^= 1 << ( mv.to - 8 );
                 }
             },
             WHITE_KING => {
@@ -654,11 +654,11 @@ impl State {
             },
             BLACK_PAWN => {
                 if mv.is_promotion() {
-                    self.bit_board[ BLACK_PAWN ] ^= 1u64 << mv.to;
-                    self.bit_board[ mv.promotion ] ^= 1u64 << mv.to;
+                    self.bit_board[ BLACK_PAWN ] ^= 1 << mv.to;
+                    self.bit_board[ mv.promotion ] ^= 1 << mv.to;
                 } else if irs.en_passant == mv.to {
                     self.simple_board[ mv.to + 8 ] = WHITE_PAWN;
-                    self.bit_board[ WHITE_PAWN ] ^= 1u64 << ( mv.to + 8 );
+                    self.bit_board[ WHITE_PAWN ] ^= 1 << ( mv.to + 8 );
                 }
             },
             BLACK_KING => {
@@ -695,7 +695,7 @@ impl State {
 
     pub fn ep_bb( &self ) -> u64 {
         if self.ep_flag() {
-            1u64 << self.en_passant
+            1 << self.en_passant
         } else {
             0
         }
@@ -711,7 +711,7 @@ impl State {
 
     pub fn ep_target_bb( &self ) -> u64 {
         if self.ep_flag() {
-            1u64 << self.ep_target()
+            1 << self.ep_target()
         } else {
             0
         }
@@ -898,7 +898,7 @@ impl State {
 
             if o_attacks & king != 0 {
                 self.num_checks += 1;
-                self.check_blocker &= 1u64 << pos;
+                self.check_blocker &= 1 << pos;
             }
         }
 
@@ -912,7 +912,7 @@ impl State {
 
             if o_attacks & king != 0 {
                 self.num_checks += 1;
-                self.check_blocker &= 1u64 << pos;
+                self.check_blocker &= 1 << pos;
             }
         }
 
@@ -1059,7 +1059,7 @@ impl State {
                 // Btw, it cannot be pinned orthogonally (unless both ep_killer and ep_target are horizontally pinned to our king, which is handled after this)
                 let mut ep_diag_pin = false;
                 vision = self.mg.b_moves( king_pos, occupancy_wo_king );
-                possibly_pinned = vision & ( 1u64 << ep_target );
+                possibly_pinned = vision & ( 1 << ep_target );
                 if possibly_pinned != 0 {
                     possibly_attacking = vision & enemies;
                     pinners = self.mg.b_moves( king_pos, occupancy_wo_king ^ possibly_pinned ) &
@@ -1076,7 +1076,7 @@ impl State {
                     // Check if the capturing pawn(s) are horizontally pinned to our king (can only be horizontal...)
                     while ep_killers != 0 {
                         pinned_pos = pop_lsb_pos( &mut ep_killers );
-                        let ep_apply: u64 = ( 1u64 << pinned_pos ) | ( 1u64 << ep_target ) | ep_bb;
+                        let ep_apply: u64 = ( 1 << pinned_pos ) | ( 1 << ep_target ) | ep_bb;
                         vision = self.mg.r_moves( king_pos, occupancy_wo_king );
                         if vision & ep_apply != 0 {
                             possibly_attacking = vision & enemies;
@@ -1099,15 +1099,15 @@ impl State {
             self.attacked & castling_path == 0 // No checks on the king's path incluing the starting and ending square
         } else {
             if mv.piece == ( self.to_move | KING ) {
-                self.attacked & ( 1u64 << mv.to ) == 0 // King can't move into check
+                self.attacked & ( 1 << mv.to ) == 0 // King can't move into check
             } else if self.num_checks > 1 {
                 false // Double check, only the King can move
             } else {
                 if mv.piece == ( self.to_move | PAWN ) && self.ep_flag() && ( self.check_blocker & self.ep_target_bb() != 0 ) {
                     // Enemy pawn checking our king can be capture en passant by my pawns
-                    ( ( self.check_blocker | self.ep_bb() ) & self.a_pins[ mv.from ] ) & ( 1u64 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
+                    ( ( self.check_blocker | self.ep_bb() ) & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
                 } else {
-                    ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1u64 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
+                    ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
                 }
             }
         }

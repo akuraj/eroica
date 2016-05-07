@@ -132,7 +132,7 @@ pub fn offset_to_algebraic( offset: usize ) -> String {
 // Rook and Bishop Masks
 pub fn rook_mask( pos: usize ) -> u64 {
     let ( i, j ) = file_rank( pos );
-    let not_rook_bb: u64 = !( 1u64 << pos );
+    let not_rook_bb: u64 = !( 1 << pos );
     let rook_mask: u64 = ( A_FILE_NE << i ) ^ ( FIRST_RANK_NE << ( 8 * j ) );
 
     rook_mask & not_rook_bb
@@ -330,7 +330,7 @@ pub fn knight_attack( pos: usize ) -> u64 {
 }
 
 pub fn king_attack( pos: usize ) -> u64 {
-    ( 1u64 << pos ) ^ influence( pos, 1 )
+    ( 1 << pos ) ^ influence( pos, 1 )
 }
 
 pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
@@ -342,8 +342,8 @@ pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
     }
 
     let ( capture_rank, mut attack, forward_1 ): ( usize, u64, u64 ) = match color {
-        WHITE => ( j + 1, PCP_W_A2 << ( pos - 8 ), 1u64 << ( pos + 8 ) ),
-        BLACK => ( j - 1, PCP_B_H7 >> ( 55 - pos ), 1u64 << ( pos - 8 ) ),
+        WHITE => ( j + 1, PCP_W_A2 << ( pos - 8 ), 1 << ( pos + 8 ) ),
+        BLACK => ( j - 1, PCP_B_H7 >> ( 55 - pos ), 1 << ( pos - 8 ) ),
         _ => panic!( "Invalid color!" ),
     };
 
@@ -356,8 +356,8 @@ pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
         {
             // Pawn hasn't moved yet
             let forward_2: u64 = match color {
-                WHITE => 1u64 << ( pos + 16 ),
-                BLACK => 1u64 << ( pos - 16 ),
+                WHITE => 1 << ( pos + 16 ),
+                BLACK => 1 << ( pos - 16 ),
                 _ => panic!( "Invalid color!" ),
             };
 
