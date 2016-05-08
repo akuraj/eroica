@@ -1258,4 +1258,34 @@ impl State {
         // ep
         if self.ep_possible { self.hash ^= self.hg.ep( self.en_passant ); }
     }
+
+    // Asserts that Incrementally computed hash is same as the one computed from scratch
+    // true = OK
+    pub fn check_hash( &mut self ) -> bool {
+        let hash = self.hash;
+        self.set_hash();
+        hash == self.hash
+    }
+
+    // Recursively check_hash till the given depth
+    pub fn check_hash_rec( &mut self, depth: usize ) -> bool {
+        assert!( depth > 0, "Depth has to be greater than zero!" );
+
+        let legal_moves = self.legal_moves();
+
+        if depth == 1 {
+            self.check_hash()
+        } else {
+            let mut ok: bool = true;
+            let irs = self.ir_state();
+
+            for mv in &legal_moves {
+                self.make( mv );
+                ok = ok && self.check_hash_rec( depth - 1 );
+                self.unmake( mv, &irs );
+            }
+
+            ok
+        }
+    }
 }
