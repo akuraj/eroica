@@ -1107,18 +1107,18 @@ impl State {
                         // 1. Discovered check - CAN'T EP!
                         // 2. The pawn that just moved is checking the king - CAN EP!
 
-                        if self.check_blocker & ( 1 << ep_target ) == 0 {
+                        if self.check_blocker & ep_target_bb == 0 {
                             // No. 1
                             self.ep_possible = false;
                         }
                     } else {
-                        // No ep pins AND king is not in check
+                        // No ep pins AND king is not in check (check_blocker == FULL_BOARD)
                         // Let's check for natural pins that may be blocking ep capture
                         let mut ep_killers = self.bit_board[ side | PAWN ] & self.mg.p_captures( self.en_passant, opp_side );
                         let mut nat_pin: bool = true;
                         while ep_killers != 0 {
                             pos = pop_lsb_pos( &mut ep_killers );
-                            nat_pin = nat_pin && ( ( self.check_blocker & self.a_pins[ pos ] & ep_bb ) == 0 );
+                            nat_pin = nat_pin && ( self.a_pins[ pos ] & ep_bb == 0 );
                         }
 
                         self.ep_possible = !nat_pin;
