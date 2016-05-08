@@ -6,6 +6,7 @@ use std::fmt;
 use consts::*;
 use utils::*;
 use movegen::*;
+use hash::*;
 
 // A mailbox style board that encodes the contents of each square in u8
 pub type SimpleBoard = [ u8; 64 ];
@@ -145,6 +146,9 @@ pub struct IRState {
     pub a_pins: [ u64; 64 ],
     pub control: [ u64; 64 ],
     pub ep_possible: bool,
+
+    // Hash
+    pub hash: u64,
 }
 
 // Full State
@@ -170,8 +174,13 @@ pub struct State {
     pub control: [ u64; 64 ],
     pub ep_possible: bool,
 
+    // Hash Generator
+    pub hg: HashGen,
+
+    // Hash
+    pub hash: u64,
+
     // repetition table
-    // hash
     // other bb items
 }
 
@@ -191,7 +200,9 @@ impl Default for State {
                 defended: 0,
                 a_pins: [ FULL_BOARD; 64 ],
                 control: [ 0; 64 ],
-                ep_possible: false, }
+                ep_possible: false,
+                hg: HashGen { ..Default::default() },
+                hash: 0, }
     }
 }
 
@@ -338,6 +349,7 @@ impl State {
 
         state.compute_control();
         state.state_check();
+        state.set_hash();
 
         state
     }
@@ -477,6 +489,7 @@ impl State {
         self.a_pins = irs.a_pins;
         self.control = irs.control;
         self.ep_possible = irs.ep_possible;
+        self.hash = irs.hash;
     }
 
     pub fn ir_state( &self ) -> IRState {
@@ -489,17 +502,31 @@ impl State {
                  defended: self.defended,
                  a_pins: self.a_pins,
                  control: self.control,
-                 ep_possible: self.ep_possible, }
+                 ep_possible: self.ep_possible,
+                 hash: self.hash, }
     }
 
     pub fn make( &mut self, mv: &Move ) {
+        // We only make legal moves!
         let side = self.to_move;
+        self.hash ^= self.hg.side_hash; // HASH_UPDATE
+
+        // Remove old castling and ep from hash
+        self.hash ^= self.hg.castling( self.castling ); // HASH_UPDATE
+        if self.ep_possible {
+            self.hash ^= self.hg.ep( self.en_passant ); // HASH_UPDATE
+        }
 
         // Update simple_board and bit_board
         self.simple_board[ mv.from ] = EMPTY;
         self.simple_board[ mv.to ] = mv.piece;
         self.bit_board[ mv.piece ] ^= mv.move_bb();
-        if mv.capture != EMPTY { self.bit_board[ mv.capture ] ^= 1 << mv.to; }
+        self.hash ^= self.hg.piece( mv.piece, mv.from ); // HASH_UPDATE
+        self.hash ^= self.hg.piece( mv.piece, mv.to ); // HASH_UPDATE
+        if mv.capture != EMPTY {
+            self.bit_board[ mv.capture ] ^= 1 << mv.to;
+            self.hash ^= self.hg.piece( mv.capture, mv.to ); // HASH_UPDATE
+        }
 
         // Update castling state and en_passant; handle promotion
         // Update simple_board and bit_board for Rook if castling
@@ -510,13 +537,17 @@ impl State {
                     self.simple_board[ mv.to ] = mv.promotion;
                     self.bit_board[ WHITE_PAWN ] ^= 1 << mv.to;
                     self.bit_board[ mv.promotion ] ^= 1 << mv.to;
+                    self.hash ^= self.hg.piece( WHITE_PAWN, mv.to ); // HASH_UPDATE
+                    self.hash ^= self.hg.piece( mv.promotion, mv.to ); // HASH_UPDATE
                 } else {
                     match mv.to - mv.from {
                         16 => { new_ep = mv.from + 8; }, // forward_2, set en_passant capture
                         _ => {
                             if self.en_passant == mv.to {
-                                self.simple_board[ mv.to - 8 ] = EMPTY;
-                                self.bit_board[ BLACK_PAWN ] ^= 1 << ( mv.to - 8 );
+                                let ep_target = mv.to - 8;
+                                self.simple_board[ ep_target ] = EMPTY;
+                                self.bit_board[ BLACK_PAWN ] ^= 1 << ep_target;
+                                self.hash ^= self.hg.piece( BLACK_PAWN, ep_target ); // HASH_UPDATE
                             }
                         },
                     }
@@ -528,11 +559,15 @@ impl State {
                         self.simple_board[ 7 ] = EMPTY;
                         self.simple_board[ 5 ] = WHITE_ROOK;
                         self.bit_board[ WHITE_ROOK ] ^= ROOK_WKC;
+                        self.hash ^= self.hg.piece( WHITE_ROOK, 7 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( WHITE_ROOK, 5 ); // HASH_UPDATE
                     },
                     WQ_CASTLE => {
                         self.simple_board[ 0 ] = EMPTY;
                         self.simple_board[ 3 ] = WHITE_ROOK;
                         self.bit_board[ WHITE_ROOK ] ^= ROOK_WQC;
+                        self.hash ^= self.hg.piece( WHITE_ROOK, 0 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( WHITE_ROOK, 3 ); // HASH_UPDATE
                     },
                     _ => {},
                 };
@@ -551,13 +586,17 @@ impl State {
                     self.simple_board[ mv.to ] = mv.promotion;
                     self.bit_board[ BLACK_PAWN ] ^= 1 << mv.to;
                     self.bit_board[ mv.promotion ] ^= 1 << mv.to;
+                    self.hash ^= self.hg.piece( BLACK_PAWN, mv.to ); // HASH_UPDATE
+                    self.hash ^= self.hg.piece( mv.promotion, mv.to ); // HASH_UPDATE
                 } else {
                     match mv.from - mv.to {
                         16 => { new_ep = mv.to + 8; }, // forward_2, set en_passant capture
                         _ => {
                             if self.en_passant == mv.to {
-                                self.simple_board[ mv.to + 8 ] = EMPTY;
-                                self.bit_board[ WHITE_PAWN ] ^= 1 << ( mv.to + 8 );
+                                let ep_target = mv.to + 8;
+                                self.simple_board[ ep_target ] = EMPTY;
+                                self.bit_board[ WHITE_PAWN ] ^= 1 << ep_target;
+                                self.hash ^= self.hg.piece( WHITE_PAWN, ep_target ); // HASH_UPDATE
                             }
                         },
                     }
@@ -569,11 +608,15 @@ impl State {
                         self.simple_board[ 63 ] = EMPTY;
                         self.simple_board[ 61 ] = BLACK_ROOK;
                         self.bit_board[ BLACK_ROOK ] ^= ROOK_BKC;
+                        self.hash ^= self.hg.piece( BLACK_ROOK, 63 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( BLACK_ROOK, 61 ); // HASH_UPDATE
                     },
                     BQ_CASTLE => {
                         self.simple_board[ 56 ] = EMPTY;
                         self.simple_board[ 59 ] = BLACK_ROOK;
                         self.bit_board[ BLACK_ROOK ] ^= ROOK_BQC;
+                        self.hash ^= self.hg.piece( BLACK_ROOK, 56 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( BLACK_ROOK, 59 ); // HASH_UPDATE
                     },
                     _ => {},
                 };
@@ -616,6 +659,12 @@ impl State {
         if mv.piece == ( side | PAWN ) || mv.capture != EMPTY { self.halfmove_clock = 0; } else { self.halfmove_clock += 1; } // update halfmove_clock
 
         self.compute_control();
+
+        // Add new castling and ep to hash
+        self.hash ^= self.hg.castling( self.castling ); // HASH_UPDATE
+        if self.ep_possible {
+            self.hash ^= self.hg.ep( self.en_passant ); // HASH_UPDATE
+        }
 
         // update repetition table
         // update other blah
@@ -1188,5 +1237,25 @@ impl State {
 
             nodes
         }
+    }
+
+    pub fn set_hash( &mut self ) {
+        self.hash = 0;
+
+        // to_move
+        if self.to_move == WHITE { self.hash ^= self.hg.side_hash; }
+
+        // pieces
+        for ( pos, piece ) in self.simple_board.iter().enumerate() {
+            if *piece != EMPTY {
+                self.hash ^= self.hg.piece( *piece, pos );
+            }
+        }
+
+        // castling
+        self.hash ^= self.hg.castling( self.castling );
+
+        // ep
+        if self.ep_possible { self.hash ^= self.hg.ep( self.en_passant ); }
     }
 }

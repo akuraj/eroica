@@ -34,6 +34,7 @@ pub mod utils;
 pub mod magics;
 pub mod movegen;
 pub mod testing;
+pub mod hash;
 
 use consts::*;
 use state::*;
@@ -41,8 +42,8 @@ use magics::*;
 use utils::*;
 use time::*;
 use movegen::*;
-use rand::{ Rng, thread_rng };
 use testing::*;
+use hash::*;
 
 fn main() {
     perftsuite_bench();
