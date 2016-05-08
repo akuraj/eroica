@@ -160,7 +160,7 @@ pub struct State {
     pub castling: u8,
     pub en_passant: usize, // Store the pos (square address)
     pub halfmove_clock: u8,
-    pub fullmove_count: u8, // Starts a 1 (First Move)
+    pub fullmove_count: u8, // Starts at 1 (First Move)
 
     // Move Generator
     pub mg: MoveGen,
