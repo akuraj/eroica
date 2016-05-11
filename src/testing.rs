@@ -45,7 +45,7 @@ pub fn parse_peft_test_case( test: &str ) -> PerftResult {
     }
 }
 
-pub fn run_perft( path: &str ) {
+pub fn run_perft( path: &str, use_hash: bool ) {
     // Run perft against test cases
     let file = match File::open( path ) {
         Ok( file ) => BufReader::new( file ),
@@ -56,7 +56,11 @@ pub fn run_perft( path: &str ) {
         let test = parse_peft_test_case( &line.unwrap() );
         let mut state = State::generate_state_from_fen( &test.fen );
         for item in &test.values {
-            assert_eq!( state.perft( item.depth, false ), item.perft_val );
+            if use_hash {
+                assert_eq!( state.hash_perft( item.depth, false ), item.perft_val );
+            } else {
+                assert_eq!( state.perft( item.depth, false ), item.perft_val );
+            }
         }
     }
 }
@@ -78,26 +82,32 @@ pub fn run_check_hash_rec( path: &str ) {
 
 pub fn perftsuite_bench() {
     let t1 = precise_time_ns();
-    run_perft( "testing/perftsuite_bench.epd" );
+    run_perft( "testing/perftsuite_bench.epd", true );
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 }
 
 #[test]
 pub fn perftsuite_lean() {
-    run_perft( "testing/perftsuite_lean.epd" );
+    run_perft( "testing/perftsuite_lean.epd", true );
+}
+
+#[test]
+#[ignore]
+pub fn perftsuite_no_hash() {
+    run_perft( "testing/perftsuite.epd", false );
 }
 
 #[test]
 #[ignore]
 pub fn perftsuite() {
-    run_perft( "testing/perftsuite.epd" );
+    run_perft( "testing/perftsuite.epd", true );
 }
 
 #[test]
 #[ignore]
 pub fn perftsuite_other() {
-    run_perft( "testing/perftsuite_other.epd" );
+    run_perft( "testing/perftsuite_other.epd", true );
 }
 
 #[test]
