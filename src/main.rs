@@ -35,6 +35,7 @@ pub mod magics;
 pub mod movegen;
 pub mod testing;
 pub mod hash;
+pub mod hashtables;
 
 use consts::*;
 use state::*;
@@ -46,5 +47,10 @@ use testing::*;
 use hash::*;
 
 fn main() {
-    perftsuite_bench();
+    let mut state = State::new_game();
+    let t1 = precise_time_ns();
+    let val = state.hash_perft( 7, false );
+    let t2 = precise_time_ns();
+    println!( "{}", val );
+    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 }

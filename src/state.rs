@@ -7,6 +7,7 @@ use consts::*;
 use utils::*;
 use movegen::*;
 use hash::*;
+use hashtables::*;
 
 // A mailbox style board that encodes the contents of each square in u8
 pub type SimpleBoard = [ u8; 64 ];
@@ -1286,6 +1287,57 @@ impl State {
             }
 
             ok
+        }
+    }
+
+    pub fn hash_perft( &mut self, depth: usize, divide: bool ) -> u64 {
+        // Initialize HashTable
+        let num_bits = if depth < 7 {
+            20
+        } else if depth == 7 {
+            24
+        } else {
+            26
+        };
+
+        let mut hp = HashPerft { ..Default::default() };
+        hp.init( num_bits );
+
+        self.hash_perft_rep( depth, divide, &mut hp )
+    }
+
+    pub fn hash_perft_rep( &mut self, depth: usize, divide: bool, hp: &mut HashPerft ) -> u64 {
+        assert!( depth > 0, "Depth has to be greater than zero!" );
+
+        if let Some( nodes ) = hp.get( self.hash, depth ) {
+            nodes
+        } else {
+            let legal_moves = self.legal_moves();
+
+            if depth == 1 {
+                legal_moves.len() as u64
+            } else {
+                let mut nodes: u64 = 0;
+                let mut nodes_child: u64;
+                let irs = self.ir_state();
+
+                for mv in &legal_moves {
+                    self.make( mv );
+                    nodes_child = self.hash_perft_rep( depth - 1, false, hp );
+                    self.unmake( mv, &irs );
+
+                    if divide {
+                        println!( "{}{}: {}", offset_to_algebraic( mv.from ), offset_to_algebraic( mv.to ), nodes_child );
+                    }
+
+                    nodes += nodes_child;
+                }
+
+                // Store in hash table
+                hp.set( self.hash, depth, nodes );
+
+                nodes
+            }
         }
     }
 }
