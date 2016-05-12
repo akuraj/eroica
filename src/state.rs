@@ -7,6 +7,8 @@ use utils::*;
 use movegen::*;
 use hash::*;
 use hashtables::*;
+use std::collections::VecDeque;
+use std::cmp;
 
 // A mailbox style board that encodes the contents of each square in u8
 pub type SimpleBoard = [ u8; 64 ];
@@ -142,6 +144,9 @@ pub struct IRState {
 
     // Hash
     pub hash: u64,
+
+    // Draws
+    pub repetition_draw: bool,
 }
 
 // Full State
@@ -173,8 +178,11 @@ pub struct State {
     // Hash
     pub hash: u64,
 
-    // repetition table
-    // other bb items
+    // History
+    pub history: VecDeque<u64>,
+
+    // Draws
+    pub repetition_draw: bool,
 }
 
 impl fmt::Display for State {
@@ -256,7 +264,9 @@ impl State {
                                 control: [ 0; 64 ],
                                 ep_possible: false,
                                 hg: HashGen::new(),
-                                hash: 0, };
+                                hash: 0,
+                                history: VecDeque::new(),
+                                repetition_draw: false, };
 
         while let Some( ( section_number, section ) ) = iter.next() {
             match section_number {
@@ -337,6 +347,8 @@ impl State {
         state.compute_control();
         state.state_check();
         state.set_hash();
+        state.history.push_front( state.hash );
+        state.set_repetition_draw();
 
         state
     }
@@ -477,6 +489,7 @@ impl State {
         self.control = irs.control;
         self.ep_possible = irs.ep_possible;
         self.hash = irs.hash;
+        self.repetition_draw = irs.repetition_draw;
     }
 
     pub fn ir_state( &self ) -> IRState {
@@ -490,7 +503,8 @@ impl State {
                  a_pins: self.a_pins,
                  control: self.control,
                  ep_possible: self.ep_possible,
-                 hash: self.hash, }
+                 hash: self.hash,
+                 repetition_draw: self.repetition_draw, }
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -653,8 +667,8 @@ impl State {
             self.hash ^= self.hg.ep( self.en_passant ); // HASH_UPDATE
         }
 
-        // update repetition table
-        // update other blah
+        self.history.push_front( self.hash );
+        self.set_repetition_draw();
     }
 
     pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
@@ -725,8 +739,7 @@ impl State {
         self.to_move ^= COLOR; // set side
         if side == BLACK { self.fullmove_count -= 1; } // update fullmove_count
 
-        // update repetition table
-        // update other blah
+        self.history.pop_front();
     }
 
     pub fn ep_flag( &self ) -> bool {
@@ -1324,5 +1337,10 @@ impl State {
                 nodes
             }
         }
+    }
+
+    pub fn set_repetition_draw( &mut self ) {
+        let rev_moves = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
+        self.repetition_draw = rev_moves > 4 && self.history.iter().take( rev_moves ).filter( |x| **x == self.hash ).count() > 2;
     }
 }
