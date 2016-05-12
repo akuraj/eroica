@@ -1340,7 +1340,7 @@ impl State {
     }
 
     pub fn set_repetition_draw( &mut self ) {
-        let rev_moves = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
-        self.repetition_draw = rev_moves > 4 && self.history.iter().take( rev_moves ).filter( |x| **x == self.hash ).count() > 2;
+        let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
+        self.repetition_draw = rev_history > 4 && self.history.iter().take( rev_history ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count() > 2;
     }
 }
