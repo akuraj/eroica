@@ -1,6 +1,5 @@
 //! An implementation of Zobrist Hash - provides an interface to return hash by piece/pos
 
-use std::default::Default;
 use rand::{ Rng, SeedableRng, ChaChaRng };
 
 pub struct HashGen {
@@ -10,41 +9,35 @@ pub struct HashGen {
     pub ep_hash: [ u64; 8 ],  // One for each file - only used if ep_possible
 }
 
-impl Default for HashGen {
-    fn default() -> Self {
+impl HashGen {
+    pub fn new() -> Self {
+        let seed: &[ _ ] = &[ 9, 11, 19, 36 ]; // 9/11/1936 is Tal's birthdate
+        let mut rng: ChaChaRng = SeedableRng::from_seed( seed );
+
         let mut hg = HashGen { side_hash: 0,
                                piece_hash: [ 0; 768 ],
                                castling_hash: [ 0; 16 ],
                                ep_hash: [ 0; 8 ], };
 
-        hg.init();
-
-        hg
-    }
-}
-
-impl HashGen {
-    pub fn init( &mut self ) {
-        let seed: &[ _ ] = &[ 9, 11, 19, 36 ]; // 9/11/1936 is Tal's birthdate
-        let mut rng: ChaChaRng = SeedableRng::from_seed( seed );
-
         // Side
-        self.side_hash = rng.gen::<u64>();
+        hg.side_hash = rng.gen::<u64>();
 
         // Pieces
-        for v in self.piece_hash.iter_mut() {
+        for v in hg.piece_hash.iter_mut() {
             *v = rng.gen::<u64>();
         }
 
         // Castling
-        for v in self.castling_hash.iter_mut() {
+        for v in hg.castling_hash.iter_mut() {
             *v = rng.gen::<u64>();
         }
 
         // en_passant
-        for v in self.ep_hash.iter_mut() {
+        for v in hg.ep_hash.iter_mut() {
             *v = rng.gen::<u64>();
         }
+
+        hg
     }
 
     pub fn piece( &self, piece: u8, pos: usize ) -> u64 {

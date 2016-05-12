@@ -1,7 +1,6 @@
 //! State representation: Define required types and functions to construct and store the state
 
 use std::ops::{ Index, IndexMut };
-use std::default::Default;
 use std::fmt;
 use consts::*;
 use utils::*;
@@ -125,13 +124,6 @@ pub struct NodeInfo {
     pub legal_moves: Vec<Move>,
 }
 
-impl Default for NodeInfo {
-    fn default() -> Self {
-        NodeInfo { status: Status::Unknown,
-                   legal_moves: Vec::new() }
-    }
-}
-
 // Irreversible State - and also Control info, which is expensive to recalc
 pub struct IRState {
     // IRState
@@ -183,28 +175,6 @@ pub struct State {
 
     // repetition table
     // other bb items
-}
-
-impl Default for State {
-    fn default() -> Self {
-        State { simple_board: [ EMPTY; 64 ],
-                bit_board: BitBoard( [ 0; 14 ] ),
-                to_move: 0,
-                castling: 0,
-                en_passant: ERR_POS,
-                halfmove_clock: 0,
-                fullmove_count: 0,
-                mg: MoveGen { ..Default::default() },
-                attacked: 0,
-                num_checks: 0,
-                check_blocker: FULL_BOARD,
-                defended: 0,
-                a_pins: [ FULL_BOARD; 64 ],
-                control: [ 0; 64 ],
-                ep_possible: false,
-                hg: HashGen { ..Default::default() },
-                hash: 0, }
-    }
 }
 
 impl fmt::Display for State {
@@ -270,7 +240,23 @@ impl State {
         assert!( num_fields == 5 || num_fields == 6, "FEN must specify exactly 5 or 6 fields ( if fullmove_count is also included ):\n{}", fen );
 
         let mut iter = fen.split_whitespace().enumerate();
-        let mut state = State{ ..Default::default() };
+        let mut state = State { simple_board: [ EMPTY; 64 ],
+                                bit_board: BitBoard( [ 0; 14 ] ),
+                                to_move: 0,
+                                castling: 0,
+                                en_passant: ERR_POS,
+                                halfmove_clock: 0,
+                                fullmove_count: 0,
+                                mg: MoveGen::new( true ),
+                                attacked: 0,
+                                num_checks: 0,
+                                check_blocker: FULL_BOARD,
+                                defended: 0,
+                                a_pins: [ FULL_BOARD; 64 ],
+                                control: [ 0; 64 ],
+                                ep_possible: false,
+                                hg: HashGen::new(),
+                                hash: 0, };
 
         while let Some( ( section_number, section ) ) = iter.next() {
             match section_number {
@@ -475,7 +461,7 @@ impl State {
         output
     }
 
-    pub fn new_game() -> Self {
+    pub fn new() -> Self {
         State::generate_state_from_fen( START_FEN )
     }
 
@@ -1300,8 +1286,7 @@ impl State {
             26
         };
 
-        let mut hp = HashPerft { ..Default::default() };
-        hp.init( num_bits );
+        let mut hp = HashPerft::new( num_bits );
 
         self.hash_perft_rep( depth, divide, &mut hp )
     }

@@ -1,7 +1,6 @@
 //! Implement required hash tables here
 
 use consts::*;
-use std::default::Default;
 
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub struct HashPerftItem {
@@ -17,18 +16,17 @@ pub struct HashPerft {
     pub ht: Vec<HashPerftItem>,
 }
 
-impl Default for HashPerft {
-    fn default() -> Self {
-        HashPerft { index_mask: 0,
-                    ht: Vec::new() }
-    }
-}
-
 impl HashPerft {
-    pub fn init( &mut self, num_bits: usize ) {
+    pub fn new( num_bits: usize ) -> Self {
         let size: usize = 1 << num_bits;
-        self.index_mask = size - 1;
-        self.ht = vec![ HashPerftItem { hash: 0, depth: ERR_POS, perft_val: 0 }; size ];
+
+        let mut hp = HashPerft { index_mask: 0,
+                                 ht: Vec::new() };
+
+        hp.index_mask = size - 1;
+        hp.ht = vec![ HashPerftItem { hash: 0, depth: ERR_POS, perft_val: 0 }; size ];
+
+        hp
     }
 
     pub fn get( &self, hash: u64, depth: usize ) -> Option<u64> {

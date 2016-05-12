@@ -1,7 +1,6 @@
 //! MoveGen - defines an interface that provides functions to get the possible attacks/moves of pieces
 //! Stores attacks for non-sliding pieces, uses magics to compute attacks for sliding pieces
 
-use std::default::Default;
 use consts::*;
 use utils::*;
 use magics::*;
@@ -23,8 +22,8 @@ pub struct MoveGen {
     pub rook_attacks: Vec<u64>,
 }
 
-impl Default for MoveGen {
-    fn default() -> Self {
+impl MoveGen {
+    pub fn new( stored: bool ) -> Self {
         let mut mg = MoveGen { knight_attacks: [ 0; 64 ],
                                king_attacks: [ 0; 64 ],
                                bishop_masks: [ 0; 64 ],
@@ -38,42 +37,36 @@ impl Default for MoveGen {
                                rook_offsets: [ 0; 64 ],
                                rook_attacks: Vec::new(), };
 
-        mg.init( true );
+        mg.bishop_shifts = BISHOP_SHIFTS;
+        mg.rook_shifts = ROOK_SHIFTS;
 
-        mg
-    }
-}
-
-impl MoveGen {
-    pub fn init( &mut self, stored: bool ) {
-        self.bishop_shifts = BISHOP_SHIFTS;
-        self.rook_shifts = ROOK_SHIFTS;
-
-        self.bishop_attacks = Vec::new();
-        self.rook_attacks = Vec::new();
+        mg.bishop_attacks = Vec::new();
+        mg.rook_attacks = Vec::new();
         let mut b_offset: usize = 0;
         let mut r_offset: usize = 0;
 
         for pos in 0..64 {
             // Compute and store attacks for non-sliding pieces
-            self.knight_attacks[ pos ] = knight_attack( pos );
-            self.king_attacks[ pos ] = king_attack( pos );
+            mg.knight_attacks[ pos ] = knight_attack( pos );
+            mg.king_attacks[ pos ] = king_attack( pos );
 
             // Compute and store magics and attack-sets for bishops and rooks
-            self.bishop_masks[ pos ] = bishop_mask( pos );
+            mg.bishop_masks[ pos ] = bishop_mask( pos );
             let ( b_magic_pos, b_attacks_pos ) = magic( pos, BISHOP, stored, false );
-            self.bishop_magics[ pos ] = b_magic_pos;
-            self.bishop_offsets[ pos ] = b_offset;
-            self.bishop_attacks.extend_from_slice( &b_attacks_pos );
+            mg.bishop_magics[ pos ] = b_magic_pos;
+            mg.bishop_offsets[ pos ] = b_offset;
+            mg.bishop_attacks.extend_from_slice( &b_attacks_pos );
             b_offset += b_attacks_pos.len();
 
-            self.rook_masks[ pos ] = rook_mask( pos );
+            mg.rook_masks[ pos ] = rook_mask( pos );
             let ( r_magic_pos, r_attacks_pos ) = magic( pos, ROOK, stored, false );
-            self.rook_magics[ pos ] = r_magic_pos;
-            self.rook_offsets[ pos ] = r_offset;
-            self.rook_attacks.extend_from_slice( &r_attacks_pos );
+            mg.rook_magics[ pos ] = r_magic_pos;
+            mg.rook_offsets[ pos ] = r_offset;
+            mg.rook_attacks.extend_from_slice( &r_attacks_pos );
             r_offset += r_attacks_pos.len();
         }
+
+        mg
     }
 
     pub fn b_moves( &self, pos: usize, occupancy: u64 ) -> u64 {
