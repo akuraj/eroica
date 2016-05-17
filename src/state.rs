@@ -114,16 +114,19 @@ impl Move {
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum Status {
     Unknown,
-    Ongoing,
-    Checkmate,
-    Stalemate
-}
 
-// NodeInfo
-#[derive(Clone,Debug)]
-pub struct NodeInfo {
-    pub status: Status,
-    pub legal_moves: Vec<Move>,
+    // Absolute
+    Checkmate,
+    Stalemate,
+
+    // Various -Draw- situations
+    FiftyMoveDraw,
+    //InsufficientMaterial,
+    RepetitionDraw,
+
+    Ongoing
+
+    // Termination Trump: Checkmate > Stalemate > FiftyMoveDraw > RepetitionDraw
 }
 
 // Irreversible State - and also Control info, which is expensive to recalc
@@ -144,9 +147,6 @@ pub struct IRState {
 
     // Hash
     pub hash: u64,
-
-    // Draws
-    pub repetition_draw: bool,
 }
 
 // Full State
@@ -181,8 +181,8 @@ pub struct State {
     // History
     pub history: VecDeque<u64>,
 
-    // Draws
-    pub repetition_draw: bool,
+    // Status
+    pub status: Status,
 }
 
 impl fmt::Display for State {
@@ -266,7 +266,7 @@ impl State {
                                 hg: HashGen::new(),
                                 hash: 0,
                                 history: VecDeque::new(),
-                                repetition_draw: false, };
+                                status: Status::Unknown };
 
         while let Some( ( section_number, section ) ) = iter.next() {
             match section_number {
@@ -348,7 +348,6 @@ impl State {
         state.state_check();
         state.set_hash();
         state.history.push_front( state.hash );
-        state.set_repetition_draw();
 
         state
     }
@@ -489,7 +488,6 @@ impl State {
         self.control = irs.control;
         self.ep_possible = irs.ep_possible;
         self.hash = irs.hash;
-        self.repetition_draw = irs.repetition_draw;
     }
 
     pub fn ir_state( &self ) -> IRState {
@@ -503,8 +501,7 @@ impl State {
                  a_pins: self.a_pins,
                  control: self.control,
                  ep_possible: self.ep_possible,
-                 hash: self.hash,
-                 repetition_draw: self.repetition_draw, }
+                 hash: self.hash, }
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -668,7 +665,8 @@ impl State {
         }
 
         self.history.push_front( self.hash );
-        self.set_repetition_draw();
+
+        self.status = Status::Unknown;
     }
 
     pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
@@ -740,6 +738,8 @@ impl State {
         if side == BLACK { self.fullmove_count -= 1; } // update fullmove_count
 
         self.history.pop_front();
+
+        self.status = Status::Unknown;
     }
 
     pub fn ep_flag( &self ) -> bool {
@@ -1197,7 +1197,7 @@ impl State {
         }
     }
 
-    pub fn legal_moves( &self ) -> Vec<Move> {
+    pub fn legal_moves( &mut self ) -> Vec<Move> {
         let moves = self.moves();
 
         // Hmm, this is faster than both (by ~25%) -
@@ -1206,6 +1206,24 @@ impl State {
         let mut legal_moves: Vec<Move> = Vec::new();
         for mv in &moves {
             if self.is_legal( mv ) { legal_moves.push( *mv ); }
+        }
+
+        // Update status
+        if legal_moves.len() == 0 {
+            if self.num_checks > 0 {
+                self.status = Status::Checkmate;
+            } else {
+                self.status = Status::Stalemate;
+            }
+        } else if self.halfmove_clock > 99 {
+            self.status = Status::FiftyMoveDraw;
+        } else {
+            let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
+            if rev_history > 4 && self.history.iter().take( rev_history ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count() > 2 {
+                self.status = Status::RepetitionDraw;
+            } else { // FIXME: Implement InsufficientMaterial?
+                self.status == Status::Ongoing;
+            }
         }
 
         legal_moves
@@ -1337,10 +1355,5 @@ impl State {
                 nodes
             }
         }
-    }
-
-    pub fn set_repetition_draw( &mut self ) {
-        let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
-        self.repetition_draw = rev_history > 4 && self.history.iter().take( rev_history ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count() > 2;
     }
 }
