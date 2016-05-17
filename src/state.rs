@@ -1356,4 +1356,14 @@ impl State {
             }
         }
     }
+
+    pub fn make_moves( &mut self, mvs: &[ Move ] ) {
+        for mv in mvs {
+            if self.is_legal( mv ) {
+                self.make( mv );
+            } else {
+                panic!( "Illegal move: {:?}", mv );
+            }
+        }
+    }
 }
