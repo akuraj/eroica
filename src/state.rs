@@ -180,9 +180,6 @@ pub struct State {
 
     // History
     pub history: VecDeque<u64>,
-
-    // Status
-    pub status: Status,
 }
 
 impl fmt::Display for State {
@@ -265,8 +262,7 @@ impl State {
                                 ep_possible: false,
                                 hg: HashGen::new(),
                                 hash: 0,
-                                history: VecDeque::new(),
-                                status: Status::Unknown };
+                                history: VecDeque::new(), };
 
         while let Some( ( section_number, section ) ) = iter.next() {
             match section_number {
@@ -665,8 +661,6 @@ impl State {
         }
 
         self.history.push_front( self.hash );
-
-        self.status = Status::Unknown;
     }
 
     pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
@@ -738,8 +732,6 @@ impl State {
         if side == BLACK { self.fullmove_count -= 1; } // update fullmove_count
 
         self.history.pop_front();
-
-        self.status = Status::Unknown;
     }
 
     pub fn ep_flag( &self ) -> bool {
@@ -1197,7 +1189,7 @@ impl State {
         }
     }
 
-    pub fn legal_moves( &mut self ) -> Vec<Move> {
+    pub fn node_info( &self ) -> ( Vec<Move>, Status ) {
         let moves = self.moves();
 
         // Hmm, this is faster than both (by ~25%) -
@@ -1208,31 +1200,32 @@ impl State {
             if self.is_legal( mv ) { legal_moves.push( *mv ); }
         }
 
-        // Update status
+        // status
+        let mut status = Status::Unknown;
         if legal_moves.len() == 0 {
             if self.num_checks > 0 {
-                self.status = Status::Checkmate;
+                status = Status::Checkmate;
             } else {
-                self.status = Status::Stalemate;
+                status = Status::Stalemate;
             }
         } else if self.halfmove_clock > 99 {
-            self.status = Status::FiftyMoveDraw;
+            status = Status::FiftyMoveDraw;
         } else {
             let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
             if rev_history > 4 && self.history.iter().take( rev_history ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count() > 2 {
-                self.status = Status::RepetitionDraw;
+                status = Status::RepetitionDraw;
             } else { // FIXME: Implement InsufficientMaterial?
-                self.status == Status::Ongoing;
+                status == Status::Ongoing;
             }
         }
 
-        legal_moves
+        ( legal_moves, status )
     }
 
     pub fn perft( &mut self, depth: usize, divide: bool ) -> u64 {
         assert!( depth > 0, "Depth has to be greater than zero!" );
 
-        let legal_moves = self.legal_moves();
+        let ( legal_moves, _ ) = self.node_info();
 
         if depth == 1 {
             legal_moves.len() as u64
@@ -1289,7 +1282,7 @@ impl State {
     pub fn check_hash_rec( &mut self, depth: usize ) -> bool {
         assert!( depth > 0, "Depth has to be greater than zero!" );
 
-        let legal_moves = self.legal_moves();
+        let ( legal_moves, _ ) = self.node_info();
 
         if depth == 1 {
             self.check_hash()
@@ -1328,7 +1321,7 @@ impl State {
         if let Some( nodes ) = hp.get( self.hash, depth ) {
             nodes
         } else {
-            let legal_moves = self.legal_moves();
+            let ( legal_moves, _ ) = self.node_info();
 
             if depth == 1 {
                 legal_moves.len() as u64
