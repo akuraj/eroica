@@ -1200,26 +1200,23 @@ impl State {
             if self.is_legal( mv ) { legal_moves.push( *mv ); }
         }
 
-        // status
-        let mut status = Status::Unknown;
+        // compute status
         if legal_moves.len() == 0 {
             if self.num_checks > 0 {
-                status = Status::Checkmate;
+                ( legal_moves, Status::Checkmate )
             } else {
-                status = Status::Stalemate;
+                ( legal_moves, Status::Stalemate )
             }
         } else if self.halfmove_clock > 99 {
-            status = Status::FiftyMoveDraw;
+            ( legal_moves, Status::FiftyMoveDraw )
         } else {
             let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
             if rev_history > 4 && self.history.iter().take( rev_history ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count() > 2 {
-                status = Status::RepetitionDraw;
+                ( legal_moves, Status::RepetitionDraw )
             } else { // FIXME: Implement InsufficientMaterial?
-                status == Status::Ongoing;
+                ( legal_moves, Status::Ongoing )
             }
         }
-
-        ( legal_moves, status )
     }
 
     pub fn perft( &mut self, depth: usize, divide: bool ) -> u64 {
