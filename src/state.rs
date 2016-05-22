@@ -134,7 +134,7 @@ pub struct IRState {
     // IRState
     pub castling: u8,
     pub en_passant: usize, // Store the pos (square address)
-    pub halfmove_clock: u8,
+    pub halfmove_clock: usize,
 
     // Control
     pub attacked: u64,
@@ -157,8 +157,8 @@ pub struct State {
     pub to_move: u8,
     pub castling: u8,
     pub en_passant: usize, // Store the pos (square address)
-    pub halfmove_clock: u8,
-    pub fullmove_count: u8, // Starts at 1 (First Move)
+    pub halfmove_clock: usize,
+    pub fullmove_count: usize, // Starts at 1 (First Move)
 
     // Move Generator
     pub mg: MoveGen,
@@ -326,14 +326,14 @@ impl State {
                     // halfmove_clock
                     state.halfmove_clock = match section {
                         "-" => 0,
-                         _  => section.parse::<u8>().unwrap(),
+                         _  => section.parse::<usize>().unwrap(),
                     }
                 },
                 5 => {
                     // fullmove_count
                     state.fullmove_count = match section {
                         "-" => 1,
-                         _  => section.parse::<u8>().unwrap(),
+                         _  => section.parse::<usize>().unwrap(),
                     }
                 },
                 _ => {},
