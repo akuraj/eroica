@@ -4,6 +4,7 @@ use std::fs::File;
 use std::str::FromStr;
 use state::*;
 use time::*;
+use pgn_parser::*;
 
 #[derive(Debug)]
 pub struct PerftResultItem {
@@ -87,9 +88,18 @@ pub fn perftsuite_bench() {
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 }
 
+pub fn game_termination_rep() {
+    let _ = parse_pgn( "testing/r1000.pgn" );
+}
+
 #[test]
 pub fn perftsuite_lean() {
     run_perft( "testing/perftsuite_lean.epd", true );
+}
+
+#[test]
+pub fn game_termination() {
+    game_termination_rep()
 }
 
 #[test]

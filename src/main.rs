@@ -36,13 +36,16 @@ pub mod movegen;
 pub mod testing;
 pub mod hash;
 pub mod hashtables;
+pub mod pgn_parser;
 
 use consts::*;
 use state::*;
 use utils::*;
 use time::*;
 use testing::*;
+use pgn_parser::*;
 
 fn main() {
-    perftsuite_bench()
+    perftsuite_bench();
+    let _ = parse_pgn( "testing/r1000.pgn" );
 }

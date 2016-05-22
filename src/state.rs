@@ -412,10 +412,8 @@ impl State {
         }
     }
 
-    pub fn fen( &self ) -> String {
+    pub fn fen( &self, strict_ep: bool ) -> String {
         let mut output = String::new();
-
-        output.push( '"' );
 
         // Board
         let mut counter: usize;
@@ -451,14 +449,15 @@ impl State {
         }
 
         // Castling
-        if self.castling & WK_CASTLE != 0 { output.push( 'K') }
-        if self.castling & WQ_CASTLE != 0 { output.push( 'Q') }
-        if self.castling & BK_CASTLE != 0 { output.push( 'k') }
-        if self.castling & BQ_CASTLE != 0 { output.push( 'q') }
+        if self.castling & WK_CASTLE != 0 { output.push( 'K' ) }
+        if self.castling & WQ_CASTLE != 0 { output.push( 'Q' ) }
+        if self.castling & BK_CASTLE != 0 { output.push( 'k' ) }
+        if self.castling & BQ_CASTLE != 0 { output.push( 'q' ) }
+        if self.castling & ( W_CASTLE | B_CASTLE ) == 0 { output.push( '-' ) }
         output.push( ' ' );
 
         // ep
-        if self.ep_flag() {
+        if self.ep_flag() && ( !strict_ep || self.ep_possible ) {
             output.push_str( &offset_to_algebraic( self.en_passant ) );
         } else {
             output.push( '-' );
@@ -472,7 +471,6 @@ impl State {
         // fullmove_count
         output.push_str( &self.fullmove_count.to_string() );
 
-        output.push( '"' );
         output
     }
 
