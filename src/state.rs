@@ -108,6 +108,14 @@ impl Move {
     pub fn move_bb( &self ) -> u64 {
         ( 1 << self.from ) | ( 1 << self.to )
     }
+
+    pub fn null_move( piece: u8, pos: usize ) -> Self {
+        Move { piece: piece,
+               from: pos,
+               to: ERR_POS,
+               capture: EMPTY,
+               promotion: EMPTY, }
+    }
 }
 
 // Game status enum
@@ -762,17 +770,9 @@ impl State {
         }
     }
 
-    pub fn null_move( &self, piece: u8, pos: usize ) -> Move {
-        Move { piece: piece,
-               from: pos,
-               to: ERR_POS,
-               capture: EMPTY,
-               promotion: EMPTY, }
-    }
-
     // All pseudo-legal moves for a given piece at a given pos, added to moves
     pub fn add_moves_from_bb( &self, piece: u8, pos: usize, moves_bb: &mut u64, moves: &mut Vec<Move> ) {
-        let mut mv = self.null_move( piece, pos );
+        let mut mv = Move::null_move( piece, pos );
         let mut to: usize;
 
         if mv.is_promotion() {
