@@ -121,7 +121,7 @@ impl Move {
 // Game status enum
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum Status {
-    Unknown,
+    /* Termination Trump: Checkmate > Stalemate > FiftyMoveDraw > RepetitionDraw > InsufficientMaterial */
 
     // Absolute
     Checkmate,
@@ -133,8 +133,6 @@ pub enum Status {
     InsufficientMaterial,
 
     Ongoing
-
-    // Termination Trump: Checkmate > Stalemate > FiftyMoveDraw > RepetitionDraw
 }
 
 // Irreversible State - and also Control info, which is expensive to recalc
