@@ -129,8 +129,8 @@ pub enum Status {
 
     // Various -Draw- situations
     FiftyMoveDraw,
-    //InsufficientMaterial,
     RepetitionDraw,
+    InsufficientMaterial,
 
     Ongoing
 
@@ -1198,7 +1198,7 @@ impl State {
             if self.is_legal( mv ) { legal_moves.push( *mv ); }
         }
 
-        // compute status
+        // compute status and return
         if legal_moves.len() == 0 {
             if self.num_checks > 0 {
                 ( legal_moves, Status::Checkmate )
@@ -1211,8 +1211,22 @@ impl State {
             let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
             if rev_history > 4 && self.history.iter().take( rev_history ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count() > 2 {
                 ( legal_moves, Status::RepetitionDraw )
-            } else { // FIXME: Implement InsufficientMaterial?
-                ( legal_moves, Status::Ongoing )
+            } else {
+                // p_n_p = pieces and pawns
+                let p_n_p = ( self.bit_board[ WHITE | KING ] & self.bit_board[ BLACK | KING ] ) ^ ( self.bit_board[ WHITE | ALL ] & self.bit_board[ BLACK | ALL ] );
+                let num_p_n_p = p_n_p.count_ones();
+                match num_p_n_p {
+                    0 => ( legal_moves, Status::InsufficientMaterial ),
+                    1 => {
+                        let survivor = self.simple_board[ p_n_p.trailing_zeros() as usize ];
+                        if survivor & BISHOP != 0 || survivor & KNIGHT != 0 {
+                            ( legal_moves, Status::InsufficientMaterial )
+                        } else {
+                            ( legal_moves, Status::Ongoing )
+                        }
+                    },
+                    _ => ( legal_moves, Status::Ongoing )
+                }
             }
         }
     }

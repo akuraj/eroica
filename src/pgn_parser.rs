@@ -392,6 +392,8 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
             assert_eq!( status, Status::FiftyMoveDraw );
         } else if termination.contains( "repetition" ) {
             assert_eq!( status, Status::RepetitionDraw );
+        } else if termination.contains( "insufficient material" ) {
+            assert_eq!( status, Status::InsufficientMaterial );
         }
 
         games.push( Game { init_pos: fen,
