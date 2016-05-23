@@ -1211,13 +1211,12 @@ impl State {
                 ( legal_moves, Status::RepetitionDraw )
             } else {
                 // p_n_p = pieces and pawns
-                let p_n_p = ( self.bit_board[ WHITE | KING ] & self.bit_board[ BLACK | KING ] ) ^ ( self.bit_board[ WHITE | ALL ] & self.bit_board[ BLACK | ALL ] );
-                let num_p_n_p = p_n_p.count_ones();
-                match num_p_n_p {
+                let p_n_p = ( self.bit_board[ WHITE | KING ] | self.bit_board[ BLACK | KING ] ) ^ ( self.bit_board[ WHITE | ALL ] | self.bit_board[ BLACK | ALL ] );
+                match p_n_p.count_ones() {
                     0 => ( legal_moves, Status::InsufficientMaterial ),
                     1 => {
-                        let survivor = self.simple_board[ p_n_p.trailing_zeros() as usize ];
-                        if survivor & BISHOP != 0 || survivor & KNIGHT != 0 {
+                        let survivor = self.simple_board[ p_n_p.trailing_zeros() as usize ] & !COLOR;
+                        if survivor == BISHOP || survivor == KNIGHT {
                             ( legal_moves, Status::InsufficientMaterial )
                         } else {
                             ( legal_moves, Status::Ongoing )
