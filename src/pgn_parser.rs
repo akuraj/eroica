@@ -117,16 +117,21 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
 
         // Replace any comment/annotation/variation with the comment indicator, '"'
         // We just ignore all the above mentioned stuff
-        // Nested stuff will break our program :(
+        // Nested stuff is unsupported!
         // Too lazy to write a proper parser....
+        let all_special: String = "\"{}()%\n".to_string();
         let move_text_nr = move_text.split( result_val_nq ).nth( 0 ).unwrap().trim();
         let mut move_text_pure = String::new();
         let mut open_comment: bool = false;
         let mut comment_type: char = '"';
         for elem in move_text_nr.chars() {
             if open_comment {
-                if elem == comment_type {
-                    open_comment = false;
+                if all_special.contains( elem ) {
+                    if elem == comment_type {
+                        open_comment = false;
+                    } else {
+                        panic!( "We don't support nested variations/comments!" );
+                    }
                 }
             } else {
                 match elem {
@@ -298,7 +303,7 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
                             if piece == ( state.to_move | PAWN ) {
                                 let size = mv_str_mut.chars().count();
                                 if size != 1 {
-                                    panic!( "Disambiguation is problematic1: {}, {}", mv_str, mv_str_mut );
+                                    panic!( "Disambiguation is problematic 1: {}, {}", mv_str, mv_str_mut );
                                 } else {
                                     let file = mv_str_mut.chars().nth( 0 ).unwrap();
                                     assert!( 'a' <= file && file <= 'h' );
@@ -313,7 +318,7 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
                                 mv_str_mut = mv_str_mut.chars().skip( 1 ).collect(); // Remove the piece identifier
                                 let size = mv_str_mut.chars().count();
                                 if size > 2 {
-                                    panic!( "Disambiguation is problematic2: {}, {}", mv_str, mv_str_mut );
+                                    panic!( "Disambiguation is problematic 2: {}, {}", mv_str, mv_str_mut );
                                 } else if size == 2 {
                                     from = algebraic_to_offset( &mv_str_mut );
                                     for x in possibilities.iter() {
@@ -338,10 +343,10 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
                                             }
                                         }
                                     } else {
-                                        panic!( "Disambiguation is problematic3: {}, {}", mv_str, mv_str_mut );
+                                        panic!( "Disambiguation is problematic 3: {}, {}", mv_str, mv_str_mut );
                                     }
                                 } else {
-                                    panic!( "Disambiguation is problematic4: {}, {}", mv_str, mv_str_mut );
+                                    panic!( "Disambiguation is problematic 4: {}, {}", mv_str, mv_str_mut );
                                 }
                             }
 
@@ -349,7 +354,7 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
                             if final_size == 1 {
                                 *( poss_filtered.iter().nth( 0 ).unwrap() )
                             } else {
-                                panic!( "Disambiguation is problematic5: {}, {}", mv_str, mv_str_mut )
+                                panic!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut )
                             }
                         } else if num_poss == 1 {
                             *( possibilities.iter().nth( 0 ).unwrap() )
