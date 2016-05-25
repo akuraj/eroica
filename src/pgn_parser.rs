@@ -119,19 +119,17 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
         // We just ignore all the above mentioned stuff
         // Nested stuff is unsupported!
         // Too lazy to write a proper parser....
-        let all_special: String = "\"{}()%\n".to_string();
+        let all_special: String = "\"{}()%".to_string();
         let move_text_nr = move_text.split( result_val_nq ).nth( 0 ).unwrap().trim();
         let mut move_text_pure = String::new();
         let mut open_comment: bool = false;
         let mut comment_type: char = '"';
         for elem in move_text_nr.chars() {
             if open_comment {
-                if all_special.contains( elem ) {
-                    if elem == comment_type {
-                        open_comment = false;
-                    } else {
-                        panic!( "We don't support nested variations/comments!" );
-                    }
+                if elem == comment_type {
+                    open_comment = false;
+                } else if all_special.contains( elem ) {
+                    panic!( "We don't support nested variations/comments!" );
                 }
             } else {
                 match elem {
