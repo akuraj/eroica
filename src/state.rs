@@ -349,7 +349,6 @@ impl State {
         state.compute_control();
         state.state_check();
         state.set_hash();
-        state.history.push_front( state.hash );
 
         state
     }
@@ -505,6 +504,9 @@ impl State {
     }
 
     pub fn make( &mut self, mv: &Move ) {
+        // Add current hash to history
+        self.history.push_front( self.hash );
+
         // We only make legal moves!
         let side = self.to_move;
         self.hash ^= self.hg.side_hash; // HASH_UPDATE
@@ -663,11 +665,12 @@ impl State {
         if self.ep_possible {
             self.hash ^= self.hg.ep( self.en_passant ); // HASH_UPDATE
         }
-
-        self.history.push_front( self.hash );
     }
 
     pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
+        // Pop the current hash
+        self.history.pop_front();
+
         let side = self.to_move ^ COLOR; // side that just moved
 
         // Update simple_board and bit_board
@@ -734,8 +737,6 @@ impl State {
         self.bit_board.set_all(); // update 'ALL' bit_boards
         self.to_move ^= COLOR; // set side
         if side == BLACK { self.fullmove_count -= 1; } // update fullmove_count
-
-        self.history.pop_front();
     }
 
     pub fn ep_flag( &self ) -> bool {
@@ -1187,7 +1188,7 @@ impl State {
 
     #[inline]
     pub fn num_repetitions( &self, depth: usize ) -> usize {
-        self.history.iter().take( depth ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count()
+        self.history.iter().take( depth ).enumerate().filter( |x| x.0 % 2 == 1 && *x.1 == self.hash ).count()
     }
 
     pub fn node_info( &self ) -> ( Vec<Move>, Status ) {
@@ -1211,8 +1212,8 @@ impl State {
         } else if self.halfmove_clock > 99 {
             ( legal_moves, Status::FiftyMoveDraw )
         } else {
-            let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
-            if rev_history > 8 && self.num_repetitions( rev_history ) > 2 {
+            let rev_history = cmp::min( self.halfmove_clock as usize, self.history.len() ); // Available reversible history
+            if rev_history > 7 && self.num_repetitions( rev_history ) > 1 {
                 ( legal_moves, Status::RepetitionDraw )
             } else {
                 // p_n_p = pieces and pawns
