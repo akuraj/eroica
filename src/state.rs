@@ -1185,6 +1185,11 @@ impl State {
         }
     }
 
+    #[inline]
+    pub fn num_repetitions( &self, depth: usize ) -> usize {
+        self.history.iter().take( depth ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count()
+    }
+
     pub fn node_info( &self ) -> ( Vec<Move>, Status ) {
         let moves = self.moves();
 
@@ -1207,7 +1212,7 @@ impl State {
             ( legal_moves, Status::FiftyMoveDraw )
         } else {
             let rev_history = cmp::min( self.halfmove_clock as usize + 1, self.history.len() ); // Available reversible history
-            if rev_history > 4 && self.history.iter().take( rev_history ).enumerate().filter( |x| x.0 % 2 == 0 && *x.1 == self.hash ).count() > 2 {
+            if rev_history > 4 && self.num_repetitions( rev_history ) > 2 {
                 ( legal_moves, Status::RepetitionDraw )
             } else {
                 // p_n_p = pieces and pawns
