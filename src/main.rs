@@ -37,6 +37,7 @@ pub mod testing;
 pub mod hash;
 pub mod hashtables;
 pub mod pgn_parser;
+pub mod evaluation;
 
 use consts::*;
 use state::*;
