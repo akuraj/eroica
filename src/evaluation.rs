@@ -5,16 +5,21 @@ pub const PAWN_VALUE_MG: i32 = 80;
 pub const KNIGHT_VALUE_MG: i32 = 320;
 pub const BISHOP_VALUE_MG: i32 = 330;
 pub const ROOK_VALUE_MG: i32 = 500;
-pub const QUEEN_VALUE_MG: i32 = 980;
+pub const QUEEN_VALUE_MG: i32 = 990;
 
 pub const PAWN_VALUE_EG: i32 = 100;
-pub const KNIGHT_VALUE_EG: i32 = 330;
-pub const BISHOP_VALUE_EG: i32 = 335;
-pub const ROOK_VALUE_EG: i32 = 500;
-pub const QUEEN_VALUE_EG: i32 = 1000;
+pub const KNIGHT_VALUE_EG: i32 = 350;
+pub const BISHOP_VALUE_EG: i32 = 355;
+pub const ROOK_VALUE_EG: i32 = 530;
+pub const QUEEN_VALUE_EG: i32 = 1040;
 
 pub const KING_VALUE: i32 = 1000000;
 
+// Game Phase Non Pawn Material (NPM) Limits
+pub const MG_NPM_LIMIT: i32 = 6130;
+pub const EG_NPM_LIMIT: i32 = 1570;
+
+// Square index map for PSTs
 pub const SQUARE_MAP: [ usize; 64 ] = [ 56, 57, 58, 59, 60, 61, 62, 63,
                                         48, 49, 50, 51, 52, 53, 54, 55,
                                         40, 41, 42, 43, 44, 45, 46, 47,
