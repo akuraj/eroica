@@ -1,6 +1,8 @@
 //! Static (Heuristic) Evaluation
 
-// Values in centi-pawns
+/* Values in centi-pawns */
+
+// Piece Values
 pub const PAWN_VALUE_MG: i32 = 80;
 pub const KNIGHT_VALUE_MG: i32 = 320;
 pub const BISHOP_VALUE_MG: i32 = 330;
@@ -13,11 +15,13 @@ pub const BISHOP_VALUE_EG: i32 = 355;
 pub const ROOK_VALUE_EG: i32 = 530;
 pub const QUEEN_VALUE_EG: i32 = 1040;
 
-pub const KING_VALUE: i32 = 1000000;
-
 // Game Phase Non Pawn Material (NPM) Limits
 pub const MG_NPM_LIMIT: i32 = 6130;
 pub const EG_NPM_LIMIT: i32 = 1570;
+
+// Game Termination Values
+pub const DRAW_VALUE: i32 = 0;
+pub const MATE_VALUE: i32 = 32000;
 
 // Square index map for PSTs
 pub const SQUARE_MAP: [ usize; 64 ] = [ 56, 57, 58, 59, 60, 61, 62, 63,
