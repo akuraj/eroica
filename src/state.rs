@@ -358,8 +358,8 @@ impl State {
         // Sufficient for the engine to play
 
         // Check number of kings
-        assert_eq!( self.bit_board[ WHITE | KING ].count_ones(), 1 );
-        assert_eq!( self.bit_board[ BLACK | KING ].count_ones(), 1 );
+        assert_eq!( self.bit_board[ WHITE_KING ].count_ones(), 1 );
+        assert_eq!( self.bit_board[ BLACK_KING ].count_ones(), 1 );
 
         // Check that opposing king is not in check if it's our move
         assert_eq!( self.defended & self.bit_board[ ( self.to_move ^ COLOR ) | KING ], 0 );
@@ -1217,7 +1217,7 @@ impl State {
                 ( legal_moves, Status::RepetitionDraw )
             } else {
                 // p_n_p = pieces and pawns
-                let p_n_p = ( self.bit_board[ WHITE | KING ] | self.bit_board[ BLACK | KING ] ) ^ ( self.bit_board[ WHITE | ALL ] | self.bit_board[ BLACK | ALL ] );
+                let p_n_p = ( self.bit_board[ WHITE_KING ] | self.bit_board[ BLACK_KING ] ) ^ ( self.bit_board[ WHITE_ALL ] | self.bit_board[ BLACK_ALL ] );
                 match p_n_p.count_ones() {
                     0 => ( legal_moves, Status::InsufficientMaterial ),
                     1 => {
