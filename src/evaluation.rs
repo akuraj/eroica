@@ -2,6 +2,8 @@
 
 /* Values in centi-pawns */
 
+// FIXME: Currently, the piece values are borrowed from Stockfish. Will tune this at some point in the future.
+
 // Piece Values
 pub const PAWN_VALUE_MG: i32 = 80;
 pub const KNIGHT_VALUE_MG: i32 = 320;
@@ -16,8 +18,12 @@ pub const ROOK_VALUE_EG: i32 = 530;
 pub const QUEEN_VALUE_EG: i32 = 1040;
 
 // Game Phase Non Pawn Material (NPM) Limits
+// MG values of the pieces are used to compute NPM
+// Don't extrapolate outisde the NPM Limits. FIXME: Revisit this later.
+// Use a Multiplier to preserve resolution -> MG_PHASE
 pub const MG_NPM_LIMIT: i32 = 6130;
 pub const EG_NPM_LIMIT: i32 = 1570;
+pub const MG_PHASE: i32 = 128;
 
 // Game Termination Values
 pub const DRAW_VALUE: i32 = 0;
