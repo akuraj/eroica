@@ -112,11 +112,11 @@ pub const KING_EG_PST: [ i32; 64 ] = [ -50,-40,-30,-20,-20,-30,-40,-50,
 // Static Evaluation Function, score from the side-to-move's POV
 pub fn static_eval( state: &State ) -> i32 {
     // FIXME: Find a better way to do this.
-    let pawn_pst : &[ i32 ] = &PAWN_PST;
-    let knight_pst : &[ i32 ] = &KNIGHT_PST;
-    let bishop_pst : &[ i32 ] = &BISHOP_PST;
-    let rook_pst : &[ i32 ] = &ROOK_PST;
-    let queen_pst : &[ i32 ] = &QUEEN_PST;
+    let pawn_pst: &[ i32 ] = &PAWN_PST;
+    let knight_pst: &[ i32 ] = &KNIGHT_PST;
+    let bishop_pst: &[ i32 ] = &BISHOP_PST;
+    let rook_pst: &[ i32 ] = &ROOK_PST;
+    let queen_pst: &[ i32 ] = &QUEEN_PST;
 
     let mut npm: i32 = 0;
     let mut eval_mg: i32 = 0;

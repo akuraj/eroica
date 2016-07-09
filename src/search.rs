@@ -2,7 +2,6 @@
 
 use state::*;
 use evaluation::*;
-use std::i32::MIN;
 use std::cmp;
 
 pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32 ) -> i32 {
@@ -13,7 +12,7 @@ pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32 ) -> 
     if depth == 0 {
         static_eval( state )
     } else {
-        let mut best_eval = MIN;
+        let mut best_eval = -MATE_VALUE;
         let mut eval;
 
         let ( legal_moves, _status ) = state.node_info();
