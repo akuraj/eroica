@@ -34,6 +34,10 @@ pub const BLACK_QUEEN: u8 = BLACK | QUEEN;
 pub const BLACK_KING: u8 = BLACK | KING;
 pub const BLACK_ALL: u8 = BLACK | ALL;
 
+// All types except kings
+pub const ALL_PIECE_TYPES: [ u8; 10 ] = [ WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN,
+                                          BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN ];
+                                          
 // Castling types
 pub const WK_CASTLE: u8 = 1;
 pub const BK_CASTLE: u8 = WK_CASTLE << BLACK;
