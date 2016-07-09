@@ -109,8 +109,8 @@ pub const KING_EG_PST: [ i32; 64 ] = [ -50,-40,-30,-20,-20,-30,-40,-50,
                                        -30,-30,  0,  0,  0,  0,-30,-30,
                                        -50,-30,-30,-30,-30,-30,-30,-50 ];
 
-// Static Evaluation Function, score from White's POV
-pub fn evaluate( state: &State ) -> i32 {
+// Static Evaluation Function, score from the side-to-move's POV
+pub fn static_eval( state: &State ) -> i32 {
     // FIXME: Find a better way to do this.
     let pawn_pst : &[ i32 ] = &PAWN_PST;
     let knight_pst : &[ i32 ] = &KNIGHT_PST;
@@ -119,8 +119,8 @@ pub fn evaluate( state: &State ) -> i32 {
     let queen_pst : &[ i32 ] = &QUEEN_PST;
 
     let mut npm: i32 = 0;
-    let mut val_mg: i32 = 0;
-    let mut val_eg: i32 = 0;
+    let mut eval_mg: i32 = 0;
+    let mut eval_eg: i32 = 0;
 
     let mut piece: u8;
     let mut color: u8;
@@ -146,16 +146,16 @@ pub fn evaluate( state: &State ) -> i32 {
                 while bb != 0 {
                     if piece != PAWN { npm += piece_val_mg; }
                     pos = pop_lsb_pos( &mut bb );
-                    val_mg += piece_val_mg + pst[ 63 - pos ];
-                    val_eg += piece_val_eg + pst[ 63 - pos ];
+                    eval_mg += piece_val_mg + pst[ 63 - pos ];
+                    eval_eg += piece_val_eg + pst[ 63 - pos ];
                 }
             },
             BLACK => {
                 while bb != 0 {
                     if piece != PAWN { npm += piece_val_mg; }
                     pos = pop_lsb_pos( &mut bb );
-                    val_mg -= piece_val_mg + pst[ pos ];
-                    val_eg -= piece_val_eg + pst[ pos ];
+                    eval_mg -= piece_val_mg + pst[ pos ];
+                    eval_eg -= piece_val_eg + pst[ pos ];
                 }
             },
             _ => panic!( "Invalid color: {}", color ),
@@ -165,17 +165,17 @@ pub fn evaluate( state: &State ) -> i32 {
     // Kings
     bb = state.bit_board[ WHITE_KING ];
     pos = pop_lsb_pos( &mut bb );
-    val_mg += KING_MG_PST[ 63 - pos ];
-    val_eg += KING_EG_PST[ 63 - pos ];
+    eval_mg += KING_MG_PST[ 63 - pos ];
+    eval_eg += KING_EG_PST[ 63 - pos ];
 
     bb = state.bit_board[ BLACK_KING ];
     pos = pop_lsb_pos( &mut bb );
-    val_mg -= KING_MG_PST[ pos ];
-    val_eg -= KING_EG_PST[ pos ];
+    eval_mg -= KING_MG_PST[ pos ];
+    eval_eg -= KING_EG_PST[ pos ];
 
-    // Tapered Eval
+    // Tapered Eval from side-to-move's POV
     npm = cmp::max( EG_NPM_LIMIT, cmp::min( MG_NPM_LIMIT, npm ) );
     let phase = ( ( npm - EG_NPM_LIMIT ) * MG_PHASE ) / ( MG_NPM_LIMIT - EG_NPM_LIMIT );
-
-    ( phase * val_mg + ( MG_PHASE - phase ) * val_eg ) / MG_PHASE
+    let eval = ( phase * eval_mg + ( MG_PHASE - phase ) * eval_eg ) / MG_PHASE;
+    if state.to_move == WHITE { eval } else { -eval }
 }
