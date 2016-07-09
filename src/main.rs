@@ -25,10 +25,12 @@ use search::*;
 use evaluation::*;
 
 fn main() {
-    let mut state = State::new();
     let t1 = precise_time_ns();
+    
+    let mut state = State::new();
     let eval = negamax( &mut state, 8, -MATE_VALUE, MATE_VALUE );
-    let t2 = precise_time_ns();
     println!( "Eval: {}", eval );
+
+    let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 }
