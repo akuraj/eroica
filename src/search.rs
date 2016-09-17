@@ -23,7 +23,7 @@ pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32 ) -> 
             state.unmake( mv, &irs );
 
             alpha = cmp::max( alpha, eval );
-            if beta <= alpha { break; } // Can also fail hard if you want
+            if beta <= alpha { break; } // Failing soft
         }
 
         eval
