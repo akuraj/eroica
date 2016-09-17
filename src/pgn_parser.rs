@@ -37,6 +37,194 @@ pub fn oc( mt: &mut String, oc: &mut bool ) {
     *oc = true;
     mt.push_str( " \" " );
 }
+
+pub fn parse_move( mv_str: &str, state: &State ) -> Move {
+    let ( legal_moves, _ ) = state.node_info();
+
+    match mv_str {
+        "O-O" | "O-O-O" => {
+            let mv = match state.to_move {
+                WHITE => {
+                    let mut mv_c = Move::null_move( WHITE_KING, 4 );
+                    mv_c.to = if mv_str == "O-O" { 6 } else { 2 };
+                    mv_c
+                },
+                BLACK => {
+                    let mut mv_c = Move::null_move( BLACK_KING, 60 );
+                    mv_c.to = if mv_str == "O-O" { 62 } else { 58 };
+                    mv_c
+                },
+                _ => panic!( "Invalid side!" ),
+            };
+
+            if state.is_legal( &mv ) {
+                mv
+            } else {
+                panic!( "Illegal move: {}", mv_str )
+            }
+        },
+        _ => {
+            let mut mv_str_mut: String = mv_str.to_string();
+
+            // Check
+            let check_str: String = mv_str_mut.chars().filter( |&x| x == '+' ).collect();
+            let check_count = check_str.chars().count();
+            assert!( check_count <= 1 );
+            let is_check = check_count > 0;
+            if is_check {
+                assert!( mv_str_mut.ends_with( &check_str ) );
+            }
+
+            // Checkmate
+            let checkmate_str: String = mv_str_mut.chars().filter( |&x| x == '#' ).collect();
+            let checkmate_count = checkmate_str.chars().count();
+            assert!( checkmate_count <= 1 );
+            let is_checkmate = checkmate_count > 0;
+            if is_checkmate {
+                assert!( mv_str_mut.ends_with( &checkmate_str ) );
+            }
+
+            assert!( !( is_check && is_checkmate ) );
+
+            // Remove check and checkmate
+            mv_str_mut = mv_str_mut.chars().filter( |&x| x != '+' && x != '#' ).collect();
+
+            let piece_char = mv_str_mut.chars().nth( 0 ).unwrap();
+
+            let from: usize;
+            let to: usize;
+            let mut capture = EMPTY;
+            let mut promotion = EMPTY;
+
+            let piece = state.to_move | match piece_char {
+                'K' => KING,
+                'Q' => QUEEN,
+                'R' => ROOK,
+                'B' => BISHOP,
+                'N' => KNIGHT,
+                _ => {
+                    assert!( 'a' <= piece_char && piece_char <= 'h' );
+                    PAWN
+                },
+            };
+
+            // Handle promotion
+            if piece == ( state.to_move | PAWN ) {
+                let promotion_str: String = mv_str_mut.chars().filter( |&x| x == '=' ).collect();
+                let promotion_count = promotion_str.chars().count();
+                assert!( promotion_count <= 1 );
+                let is_promotion = promotion_count > 0;
+                if is_promotion {
+                    let temp_str = mv_str_mut;
+                    let promoted_to = temp_str.split( '=' ).nth( 1 ).unwrap();
+                    mv_str_mut = temp_str.split( '=' ).nth( 0 ).unwrap().to_string();
+                    promotion = state.to_move | match promoted_to {
+                        "Q" => QUEEN,
+                        "R" => ROOK,
+                        "B" => BISHOP,
+                        "N" => KNIGHT,
+                        _ => panic!( "Invalid promotion: {}", promoted_to ),
+                    };
+                }
+            }
+
+            // Handle capture and to location
+            let capture_str: String = mv_str_mut.chars().filter( |&x| x == 'x' ).collect();
+            let capture_count = capture_str.chars().count();
+            assert!( capture_count <= 1 );
+            let is_capture = capture_count > 0;
+            if is_capture {
+                let temp_str = mv_str_mut;
+                let capture_square = temp_str.split( 'x' ).nth( 1 ).unwrap();
+                mv_str_mut = temp_str.split( 'x' ).nth( 0 ).unwrap().to_string();
+                to = algebraic_to_offset( capture_square );
+                capture = state.simple_board[ to ];
+            } else {
+                let temp_str = mv_str_mut;
+                let size = temp_str.chars().count();
+                let destination: String = temp_str.chars().skip( size - 2 ).collect();
+                to = algebraic_to_offset( &destination );
+                mv_str_mut = temp_str.chars().take( size - 2 ).collect();
+            }
+
+            // Handle disambiguation
+            let mut possibilities: Vec<Move> = Vec::new();
+            for x in legal_moves.iter() {
+                if x.piece == piece && x.to == to && x.capture == capture && x.promotion == promotion {
+                    possibilities.push( *x );
+                }
+            }
+
+            let num_poss = possibilities.iter().count();
+
+            if num_poss > 1 {
+                let mut poss_filtered: Vec<Move> = Vec::new();
+
+                if piece == ( state.to_move | PAWN ) {
+                    let size = mv_str_mut.chars().count();
+                    if size != 1 {
+                        panic!( "Disambiguation is problematic 1: {}, {}", mv_str, mv_str_mut );
+                    } else {
+                        let file = mv_str_mut.chars().nth( 0 ).unwrap();
+                        assert!( 'a' <= file && file <= 'h' );
+                        let file_num = file as usize - 'a' as usize;
+                        for x in possibilities.iter() {
+                            if x.from % 8 == file_num {
+                                poss_filtered.push( *x );
+                            }
+                        }
+                    }
+                } else {
+                    mv_str_mut = mv_str_mut.chars().skip( 1 ).collect(); // Remove the piece identifier
+                    let size = mv_str_mut.chars().count();
+                    if size > 2 {
+                        panic!( "Disambiguation is problematic 2: {}, {}", mv_str, mv_str_mut );
+                    } else if size == 2 {
+                        from = algebraic_to_offset( &mv_str_mut );
+                        for x in possibilities.iter() {
+                            if x.from == from {
+                                poss_filtered.push( *x );
+                            }
+                        }
+                    } else if size == 1 {
+                        let disamb = mv_str_mut.chars().nth( 0 ).unwrap();
+                        if '1' <= disamb && disamb <= '8' {
+                            let rank_num = disamb as usize - '1' as usize;
+                            for x in possibilities.iter() {
+                                if x.from / 8 == rank_num {
+                                    poss_filtered.push( *x );
+                                }
+                            }
+                        } else if 'a' <= disamb && disamb <= 'h' {
+                            let file_num = disamb as usize - 'a' as usize;
+                            for x in possibilities.iter() {
+                                if x.from % 8 == file_num {
+                                    poss_filtered.push( *x );
+                                }
+                            }
+                        } else {
+                            panic!( "Disambiguation is problematic 3: {}, {}", mv_str, mv_str_mut );
+                        }
+                    } else {
+                        panic!( "Disambiguation is problematic 4: {}, {}", mv_str, mv_str_mut );
+                    }
+                }
+
+                let final_size = poss_filtered.iter().count();
+                if final_size == 1 {
+                    *( poss_filtered.iter().nth( 0 ).unwrap() )
+                } else {
+                    panic!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut )
+                }
+            } else if num_poss == 1 {
+                *( possibilities.iter().nth( 0 ).unwrap() )
+            } else {
+                panic!( "Illegal move: {}", mv_str )
+            }
+        }
+    }
+}
+
 // Parse pgn, do some checks and return the GameList
 pub fn parse_pgn( path: &str ) -> Vec<Game> {
     let file = match File::open( path ) {
@@ -177,191 +365,7 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
 
                 mni = false;
             } else { // This one is a move... finally!
-                let ( legal_moves, _ ) = state.node_info();
-
-                let the_move = match mv_str {
-                    "O-O" | "O-O-O" => {
-                        let mv = match state.to_move {
-                            WHITE => {
-                                let mut mv_c = Move::null_move( WHITE_KING, 4 );
-                                mv_c.to = if mv_str == "O-O" { 6 } else { 2 };
-                                mv_c
-                            },
-                            BLACK => {
-                                let mut mv_c = Move::null_move( BLACK_KING, 60 );
-                                mv_c.to = if mv_str == "O-O" { 62 } else { 58 };
-                                mv_c
-                            },
-                            _ => panic!( "Invalid side!" ),
-                        };
-
-                        if state.is_legal( &mv ) {
-                            mv
-                        } else {
-                            panic!( "Illegal move: {}", mv_str )
-                        }
-                    },
-                    _ => {
-                        let mut mv_str_mut: String = mv_str.to_string();
-
-                        // Check
-                        let check_str: String = mv_str_mut.chars().filter( |&x| x == '+' ).collect();
-                        let check_count = check_str.chars().count();
-                        assert!( check_count <= 1 );
-                        let is_check = check_count > 0;
-                        if is_check {
-                            assert!( mv_str_mut.ends_with( &check_str ) );
-                        }
-
-                        // Checkmate
-                        let checkmate_str: String = mv_str_mut.chars().filter( |&x| x == '#' ).collect();
-                        let checkmate_count = checkmate_str.chars().count();
-                        assert!( checkmate_count <= 1 );
-                        let is_checkmate = checkmate_count > 0;
-                        if is_checkmate {
-                            assert!( mv_str_mut.ends_with( &checkmate_str ) );
-                        }
-
-                        assert!( !( is_check && is_checkmate ) );
-
-                        // Remove check and checkmate
-                        mv_str_mut = mv_str_mut.chars().filter( |&x| x != '+' && x != '#' ).collect();
-
-                        let piece_char = mv_str_mut.chars().nth( 0 ).unwrap();
-
-                        let from: usize;
-                        let to: usize;
-                        let mut capture = EMPTY;
-                        let mut promotion = EMPTY;
-
-                        let piece = state.to_move | match piece_char {
-                            'K' => KING,
-                            'Q' => QUEEN,
-                            'R' => ROOK,
-                            'B' => BISHOP,
-                            'N' => KNIGHT,
-                            _ => {
-                                assert!( 'a' <= piece_char && piece_char <= 'h' );
-                                PAWN
-                            },
-                        };
-
-                        // Handle promotion
-                        if piece == ( state.to_move | PAWN ) {
-                            let promotion_str: String = mv_str_mut.chars().filter( |&x| x == '=' ).collect();
-                            let promotion_count = promotion_str.chars().count();
-                            assert!( promotion_count <= 1 );
-                            let is_promotion = promotion_count > 0;
-                            if is_promotion {
-                                let temp_str = mv_str_mut;
-                                let promoted_to = temp_str.split( '=' ).nth( 1 ).unwrap();
-                                mv_str_mut = temp_str.split( '=' ).nth( 0 ).unwrap().to_string();
-                                promotion = state.to_move | match promoted_to {
-                                    "Q" => QUEEN,
-                                    "R" => ROOK,
-                                    "B" => BISHOP,
-                                    "N" => KNIGHT,
-                                    _ => panic!( "Invalid promotion: {}", promoted_to ),
-                                };
-                            }
-                        }
-
-                        // Handle capture and to location
-                        let capture_str: String = mv_str_mut.chars().filter( |&x| x == 'x' ).collect();
-                        let capture_count = capture_str.chars().count();
-                        assert!( capture_count <= 1 );
-                        let is_capture = capture_count > 0;
-                        if is_capture {
-                            let temp_str = mv_str_mut;
-                            let capture_square = temp_str.split( 'x' ).nth( 1 ).unwrap();
-                            mv_str_mut = temp_str.split( 'x' ).nth( 0 ).unwrap().to_string();
-                            to = algebraic_to_offset( capture_square );
-                            capture = state.simple_board[ to ];
-                        } else {
-                            let temp_str = mv_str_mut;
-                            let size = temp_str.chars().count();
-                            let destination: String = temp_str.chars().skip( size - 2 ).collect();
-                            to = algebraic_to_offset( &destination );
-                            mv_str_mut = temp_str.chars().take( size - 2 ).collect();
-                        }
-
-                        // Handle disambiguation
-                        let mut possibilities: Vec<Move> = Vec::new();
-                        for x in legal_moves.iter() {
-                            if x.piece == piece && x.to == to && x.capture == capture && x.promotion == promotion {
-                                possibilities.push( *x );
-                            }
-                        }
-
-                        let num_poss = possibilities.iter().count();
-
-                        if num_poss > 1 {
-                            let mut poss_filtered: Vec<Move> = Vec::new();
-
-                            if piece == ( state.to_move | PAWN ) {
-                                let size = mv_str_mut.chars().count();
-                                if size != 1 {
-                                    panic!( "Disambiguation is problematic 1: {}, {}", mv_str, mv_str_mut );
-                                } else {
-                                    let file = mv_str_mut.chars().nth( 0 ).unwrap();
-                                    assert!( 'a' <= file && file <= 'h' );
-                                    let file_num = file as usize - 'a' as usize;
-                                    for x in possibilities.iter() {
-                                        if x.from % 8 == file_num {
-                                            poss_filtered.push( *x );
-                                        }
-                                    }
-                                }
-                            } else {
-                                mv_str_mut = mv_str_mut.chars().skip( 1 ).collect(); // Remove the piece identifier
-                                let size = mv_str_mut.chars().count();
-                                if size > 2 {
-                                    panic!( "Disambiguation is problematic 2: {}, {}", mv_str, mv_str_mut );
-                                } else if size == 2 {
-                                    from = algebraic_to_offset( &mv_str_mut );
-                                    for x in possibilities.iter() {
-                                        if x.from == from {
-                                            poss_filtered.push( *x );
-                                        }
-                                    }
-                                } else if size == 1 {
-                                    let disamb = mv_str_mut.chars().nth( 0 ).unwrap();
-                                    if '1' <= disamb && disamb <= '8' {
-                                        let rank_num = disamb as usize - '1' as usize;
-                                        for x in possibilities.iter() {
-                                            if x.from / 8 == rank_num {
-                                                poss_filtered.push( *x );
-                                            }
-                                        }
-                                    } else if 'a' <= disamb && disamb <= 'h' {
-                                        let file_num = disamb as usize - 'a' as usize;
-                                        for x in possibilities.iter() {
-                                            if x.from % 8 == file_num {
-                                                poss_filtered.push( *x );
-                                            }
-                                        }
-                                    } else {
-                                        panic!( "Disambiguation is problematic 3: {}, {}", mv_str, mv_str_mut );
-                                    }
-                                } else {
-                                    panic!( "Disambiguation is problematic 4: {}, {}", mv_str, mv_str_mut );
-                                }
-                            }
-
-                            let final_size = poss_filtered.iter().count();
-                            if final_size == 1 {
-                                *( poss_filtered.iter().nth( 0 ).unwrap() )
-                            } else {
-                                panic!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut )
-                            }
-                        } else if num_poss == 1 {
-                            *( possibilities.iter().nth( 0 ).unwrap() )
-                        } else {
-                            panic!( "Illegal move: {}", mv_str )
-                        }
-                    }
-                };
-
+                let the_move = parse_move( mv_str, &state );
                 move_list.push( the_move );
                 state.make( &the_move );
                 mni = state.to_move == WHITE;

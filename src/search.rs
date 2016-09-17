@@ -3,6 +3,27 @@
 use state::*;
 use evaluation::*;
 use std::cmp;
+use std::collections::VecDeque;
+
+pub struct Variation {
+    pub eval: i32,
+    pub move_list: VecDeque<Move>,
+}
+
+impl Variation {
+    pub fn terminal( eval: i32 ) -> Self {
+        Variation { eval: eval,
+                    move_list: VecDeque::new(), }
+    }
+
+    pub fn max_assign( &mut self, mv: &Move, var: Variation ) {
+        if self.eval < -( var.eval ) {
+            self.eval = -var.eval;
+            self.move_list = var.move_list;
+            self.move_list.push_front( *mv );
+        }
+    }
+}
 
 pub fn quiescence( state: &mut State, mut alpha: i32, beta: i32 ) -> i32 {
     let ( legal_moves, status ) = state.node_info();
@@ -36,32 +57,31 @@ pub fn quiescence( state: &mut State, mut alpha: i32, beta: i32 ) -> i32 {
     }
 }
 
-pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32 ) -> i32 {
+pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32 ) -> Variation {
     // TT should store alpha, beta, bestValue???
-    // also return the principal variation
     // move ordering??
 
     if depth == 0 {
-        quiescence( state, alpha, beta )
+        Variation::terminal( quiescence( state, alpha, beta ) )
     } else {
         let ( legal_moves, status ) = state.node_info();
 
         if status == Status::Ongoing {
             let irs = state.ir_state();
-            let mut eval = -MATE_VALUE;
+            let mut var = Variation::terminal( -MATE_VALUE );
 
             for mv in &legal_moves {
                 state.make( mv );
-                eval = cmp::max( eval, -negamax( state, depth - 1, -beta, -alpha ) );
+                var.max_assign( mv, negamax( state, depth - 1, -beta, -alpha ) );
                 state.unmake( mv, &irs );
 
-                alpha = cmp::max( alpha, eval );
+                alpha = cmp::max( alpha, var.eval );
                 if beta <= alpha { break; } // Failing soft
             }
 
-            eval
+            var
         } else {
-            if status == Status::Checkmate { -MATE_VALUE } else { DRAW_VALUE }
+            if status == Status::Checkmate { Variation::terminal( -MATE_VALUE ) } else { Variation::terminal( DRAW_VALUE ) }
         }
     }
 }

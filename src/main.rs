@@ -28,8 +28,11 @@ fn main() {
     let t1 = precise_time_ns();
 
     let mut state = State::new();
-    let eval = negamax( &mut state, 8, -MATE_VALUE, MATE_VALUE );
-    println!( "Eval: {}", eval );
+    let pv = negamax( &mut state, 8, -MATE_VALUE, MATE_VALUE );
+    println!( "Eval: {}", pv.eval );
+    for mv in &pv.move_list {
+        println!( "{}", mv );
+    }
 
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
