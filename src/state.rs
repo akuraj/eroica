@@ -121,19 +121,27 @@ impl Move {
 impl fmt::Display for Move {
     fn fmt( &self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = String::new();
-
-        output.push( piece_to_char( self.piece ) );
-        output.push( ' ' );
-        output.push_str( &( offset_to_algebraic( self.from ) ) );
-        if self.capture != EMPTY {
-            output.push( 'x' );
+        let castling = self.castling();
+        if castling != 0 {
+            if castling == WK_CASTLE || castling == BK_CASTLE {
+                output.push_str( "O-O" );
+            } else if castling == WQ_CASTLE || castling == BQ_CASTLE {
+                output.push_str( "O-O-O" );
+            } else {
+                panic!( "Invalid Castling: {}!", castling );
+            }
         } else {
-            output.push( '-' );
-        }
-        output.push_str( &( offset_to_algebraic( self.to ) ) );
-        if self.promotion != EMPTY {
-            output.push( '=' );
-            output.push( piece_to_char( self.promotion ) );
+            output.push_str( &( offset_to_algebraic( self.from ) ) );
+            if self.capture != EMPTY {
+                output.push( 'x' );
+            } else {
+                output.push( '-' );
+            }
+            output.push_str( &( offset_to_algebraic( self.to ) ) );
+            if self.promotion != EMPTY {
+                output.push( '=' );
+                output.push( piece_to_char( self.promotion ) );
+            }
         }
 
         write!( f, "{}", output )
