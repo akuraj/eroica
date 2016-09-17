@@ -1371,4 +1371,17 @@ impl State {
             }
         }
     }
+
+    pub fn is_tactical( &self, mv: &Move ) -> bool {
+        mv.capture != EMPTY || mv.promotion != EMPTY
+    }
+
+    pub fn tactical_moves( &self, legal_moves: &[ Move ] ) -> Vec<Move> {
+        let mut tactical_moves: Vec<Move> = Vec::new();
+        for mv in legal_moves {
+            if self.is_tactical( mv ) { tactical_moves.push( *mv ); }
+        }
+
+        tactical_moves
+    }
 }

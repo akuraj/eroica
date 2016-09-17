@@ -26,7 +26,7 @@ use evaluation::*;
 
 fn main() {
     let t1 = precise_time_ns();
-    
+
     let mut state = State::new();
     let eval = negamax( &mut state, 8, -MATE_VALUE, MATE_VALUE );
     println!( "Eval: {}", eval );
