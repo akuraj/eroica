@@ -42,9 +42,16 @@ pub fn play() {
         if state.to_move == opponent_color {
             println!( "{}\nYour move:\n", state );
             let input = user_input( buffer, stdin );
-            let mv = parse_move( input, &state );
-            println!( "Parsed: {}\n\n", mv );
-            state.make( &mv );
+            match parse_move( input, &state ) {
+                Ok( mv ) => {
+                    println!( "Parsed: {}\n\n", mv );
+                    state.make( &mv );
+                },
+                Err( error ) => {
+                    println!( "\nThere was an error with the input, please try again.\nDETAIL: {}", error );
+                    continue;
+                },
+            }
         } else {
             let pv = negamax( &mut state, search_depth, -MATE_VALUE, MATE_VALUE );
             let mv = pv.move_list.get( 0 ).unwrap();

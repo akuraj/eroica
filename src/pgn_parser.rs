@@ -38,7 +38,7 @@ pub fn oc( mt: &mut String, oc: &mut bool ) {
     mt.push_str( " \" " );
 }
 
-pub fn parse_move( mv_str: &str, state: &State ) -> Move {
+pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
     let ( legal_moves, _ ) = state.node_info();
 
     match mv_str {
@@ -58,9 +58,9 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
             };
 
             if legal_moves.contains( &mv ) {
-                mv
+                Ok( mv )
             } else {
-                panic!( "Illegal move: {}", mv )
+                Err( format!( "Illegal move: {}", mv ) )
             }
         },
         _ => {
@@ -69,27 +69,30 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
             // Check
             let check_str: String = mv_str_mut.chars().filter( |&x| x == '+' ).collect();
             let check_count = check_str.chars().count();
-            assert!( check_count <= 1 );
+            if check_count > 1 { return Err( format!( "Too many '+'s in {}", mv_str_mut ) ); }
             let is_check = check_count > 0;
-            if is_check {
-                assert!( mv_str_mut.ends_with( &check_str ) );
+            if is_check && !mv_str_mut.ends_with( &check_str ) {
+                return Err( format!( "{} doesn't end with {}", mv_str_mut, check_str ) );
             }
 
             // Checkmate
             let checkmate_str: String = mv_str_mut.chars().filter( |&x| x == '#' ).collect();
             let checkmate_count = checkmate_str.chars().count();
-            assert!( checkmate_count <= 1 );
+            if checkmate_count > 1 { return Err( format!( "Too many '#'s in {}", mv_str_mut ) ); }
             let is_checkmate = checkmate_count > 0;
-            if is_checkmate {
-                assert!( mv_str_mut.ends_with( &checkmate_str ) );
+            if is_checkmate && !mv_str_mut.ends_with( &checkmate_str ) {
+                return Err( format!( "{} doesn't end with {}", mv_str_mut, checkmate_str ) );
             }
 
-            assert!( !( is_check && is_checkmate ) );
+            if is_check && is_checkmate { return Err( format!( "Input move has both '+' and '#'" ) ); }
 
             // Remove check and checkmate
             mv_str_mut = mv_str_mut.chars().filter( |&x| x != '+' && x != '#' ).collect();
 
-            let piece_char = mv_str_mut.chars().nth( 0 ).unwrap();
+            let piece_char = match mv_str_mut.chars().nth( 0 ) {
+                Some( piece_char_actual ) => piece_char_actual,
+                None => return Err( format!( "piece_char: mv_str_mut[ 0 ] out of bounds!" ) ),
+            };
 
             let from: usize;
             let to: usize;
@@ -103,8 +106,11 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
                 'B' => BISHOP,
                 'N' => KNIGHT,
                 _ => {
-                    assert!( 'a' <= piece_char && piece_char <= 'h' );
-                    PAWN
+                    if 'a' <= piece_char && piece_char <= 'h' {
+                        PAWN
+                    } else {
+                        return Err( format!( "Invalid piece_char: {}", piece_char ) )
+                    }
                 },
             };
 
@@ -112,18 +118,27 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
             if piece == ( state.to_move | PAWN ) {
                 let promotion_str: String = mv_str_mut.chars().filter( |&x| x == '=' ).collect();
                 let promotion_count = promotion_str.chars().count();
-                assert!( promotion_count <= 1 );
+                if promotion_count > 1 { return Err( format!( "Too many '='s in {}", mv_str_mut ) ); }
                 let is_promotion = promotion_count > 0;
                 if is_promotion {
                     let temp_str = mv_str_mut;
-                    let promoted_to = temp_str.split( '=' ).nth( 1 ).unwrap();
-                    mv_str_mut = temp_str.split( '=' ).nth( 0 ).unwrap().to_string();
+
+                    let promoted_to = match temp_str.split( '=' ).nth( 1 ) {
+                        Some( promoted_to_actual ) => promoted_to_actual,
+                        None => return Err( format!( "promoted_to: temp_str[ 1 ] out of bounds!" ) ),
+                    };
+
+                    mv_str_mut = ( match temp_str.split( '=' ).nth( 0 ) {
+                        Some( mv_str_mut_actual ) =>  mv_str_mut_actual,
+                        None => return Err( format!( "temp_str[ 0 ] out of bounds!" ) ),
+                    } ).to_string();
+
                     promotion = state.to_move | match promoted_to {
                         "Q" => QUEEN,
                         "R" => ROOK,
                         "B" => BISHOP,
                         "N" => KNIGHT,
-                        _ => panic!( "Invalid promotion: {}", promoted_to ),
+                        _ => return Err( format!( "Invalid promotion: {}", promoted_to ) ),
                     };
                 }
             }
@@ -131,12 +146,21 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
             // Handle capture and to location
             let capture_str: String = mv_str_mut.chars().filter( |&x| x == 'x' ).collect();
             let capture_count = capture_str.chars().count();
-            assert!( capture_count <= 1 );
+            if capture_count > 1 { return Err( format!( "Too many 'x's in the input move: {}", mv_str_mut ) ); }
             let is_capture = capture_count > 0;
             if is_capture {
                 let temp_str = mv_str_mut;
-                let capture_square = temp_str.split( 'x' ).nth( 1 ).unwrap();
-                mv_str_mut = temp_str.split( 'x' ).nth( 0 ).unwrap().to_string();
+
+                let capture_square = match temp_str.split( 'x' ).nth( 1 ) {
+                    Some( capture_square_actual ) => capture_square_actual,
+                    None => return Err( format!( "capture_square: temp_str[ 1 ] out of bounds!" ) ),
+                };
+
+                mv_str_mut = ( match temp_str.split( 'x' ).nth( 0 ) {
+                    Some( mv_str_mut_actual ) =>  mv_str_mut_actual,
+                    None => return Err( format!( "temp_str[ 0 ] out of bounds!" ) ),
+                } ).to_string();
+
                 to = algebraic_to_offset( capture_square );
                 capture = state.simple_board[ to ];
             } else {
@@ -163,22 +187,29 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
                 if piece == ( state.to_move | PAWN ) {
                     let size = mv_str_mut.chars().count();
                     if size != 1 {
-                        panic!( "Disambiguation is problematic 1: {}, {}", mv_str, mv_str_mut );
+                        return Err( format!( "Disambiguation is problematic 1: {}, {}", mv_str, mv_str_mut ) );
                     } else {
-                        let file = mv_str_mut.chars().nth( 0 ).unwrap();
-                        assert!( 'a' <= file && file <= 'h' );
-                        let file_num = file as usize - 'a' as usize;
-                        for x in possibilities.iter() {
-                            if x.from % 8 == file_num {
-                                poss_filtered.push( *x );
+                        let file = match mv_str_mut.chars().nth( 0 ) {
+                            Some( file_actual ) => file_actual,
+                            None => return Err( format!( "file: mv_str_mut[ 0 ] out of bounds!" ) ),
+                        };
+
+                        if 'a' <= file && file <= 'h' {
+                            let file_num = file as usize - 'a' as usize;
+                            for x in possibilities.iter() {
+                                if x.from % 8 == file_num {
+                                    poss_filtered.push( *x );
+                                }
                             }
+                        } else {
+                            return Err( format!( "Invalid file: {}", file ) );
                         }
                     }
                 } else {
                     mv_str_mut = mv_str_mut.chars().skip( 1 ).collect(); // Remove the piece identifier
                     let size = mv_str_mut.chars().count();
                     if size > 2 {
-                        panic!( "Disambiguation is problematic 2: {}, {}", mv_str, mv_str_mut );
+                        return Err( format!( "Disambiguation is problematic 2: {}, {}", mv_str, mv_str_mut ) );
                     } else if size == 2 {
                         from = algebraic_to_offset( &mv_str_mut );
                         for x in possibilities.iter() {
@@ -187,7 +218,11 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
                             }
                         }
                     } else if size == 1 {
-                        let disamb = mv_str_mut.chars().nth( 0 ).unwrap();
+                        let disamb = match mv_str_mut.chars().nth( 0 ) {
+                            Some( file_actual ) => file_actual,
+                            None => return Err( format!( "disamb: mv_str_mut[ 0 ] out of bounds!" ) ),
+                        };
+
                         if '1' <= disamb && disamb <= '8' {
                             let rank_num = disamb as usize - '1' as usize;
                             for x in possibilities.iter() {
@@ -203,23 +238,29 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
                                 }
                             }
                         } else {
-                            panic!( "Disambiguation is problematic 3: {}, {}", mv_str, mv_str_mut );
+                            return Err( format!( "Disambiguation is problematic 3: {}, {}", mv_str, mv_str_mut ) )
                         }
                     } else {
-                        panic!( "Disambiguation is problematic 4: {}, {}", mv_str, mv_str_mut );
+                        return Err( format!( "Disambiguation is problematic 4: {}, {}", mv_str, mv_str_mut ) )
                     }
                 }
 
                 let final_size = poss_filtered.iter().count();
                 if final_size == 1 {
-                    *( poss_filtered.iter().nth( 0 ).unwrap() )
+                    match poss_filtered.iter().nth( 0 ) {
+                        Some( poss_filtered_actual ) => Ok( *poss_filtered_actual ),
+                        None => return Err( format!( "poss_filtered: poss_filtered[ 0 ] out of bounds!" ) ),
+                    }
                 } else {
-                    panic!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut )
+                    return Err( format!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut ) )
                 }
             } else if num_poss == 1 {
-                *( possibilities.iter().nth( 0 ).unwrap() )
+                match possibilities.iter().nth( 0 ) {
+                    Some( possibilities_actual ) => Ok( *possibilities_actual ),
+                    None => return Err( format!( "possibilities: possibilities[ 0 ] out of bounds!" ) ),
+                }
             } else {
-                panic!( "Illegal move: {}", mv_str )
+                return Err( format!( "Illegal move: {}", mv_str ) )
             }
         }
     }
@@ -365,7 +406,11 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
 
                 mni = false;
             } else { // This one is a move... finally!
-                let the_move = parse_move( mv_str, &state );
+                let the_move = match parse_move( mv_str, &state ) {
+                    Ok( the_move_actual ) => the_move_actual,
+                    Err( error ) => panic!( "{}", error ),
+                };
+
                 move_list.push( the_move );
                 state.make( &the_move );
                 mni = state.to_move == WHITE;
