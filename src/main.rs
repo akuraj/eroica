@@ -20,11 +20,7 @@ pub mod evaluation;
 pub mod search;
 pub mod simple_game;
 
-use state::*;
 use time::*;
-use search::*;
-use evaluation::*;
-use std::io;
 
 fn main() {
     let t1 = precise_time_ns();
