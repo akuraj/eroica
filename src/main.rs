@@ -18,21 +18,18 @@ pub mod hashtables;
 pub mod pgn_parser;
 pub mod evaluation;
 pub mod search;
+pub mod simple_game;
 
 use state::*;
 use time::*;
 use search::*;
 use evaluation::*;
+use std::io;
 
 fn main() {
     let t1 = precise_time_ns();
 
-    let mut state = State::new();
-    let pv = negamax( &mut state, 8, -MATE_VALUE, MATE_VALUE );
-    println!( "Eval: {}", pv.eval );
-    for mv in &pv.move_list {
-        println!( "{}", mv );
-    }
+    simple_game::play();
 
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );

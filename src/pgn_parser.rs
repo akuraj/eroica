@@ -41,9 +41,9 @@ pub fn oc( mt: &mut String, oc: &mut bool ) {
 pub fn parse_move( mv_str: &str, state: &State ) -> Move {
     let ( legal_moves, _ ) = state.node_info();
 
-    match mv_str {
+    let mv = match mv_str {
         "O-O" | "O-O-O" => {
-            let mv = match state.to_move {
+            match state.to_move {
                 WHITE => {
                     let mut mv_c = Move::null_move( WHITE_KING, 4 );
                     mv_c.to = if mv_str == "O-O" { 6 } else { 2 };
@@ -55,12 +55,6 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
                     mv_c
                 },
                 _ => panic!( "Invalid side!" ),
-            };
-
-            if state.is_legal( &mv ) {
-                mv
-            } else {
-                panic!( "Illegal move: {}", mv_str )
             }
         },
         _ => {
@@ -222,6 +216,12 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Move {
                 panic!( "Illegal move: {}", mv_str )
             }
         }
+    };
+
+    if legal_moves.contains( &mv ) {
+        mv
+    } else {
+        panic!( "Illegal move: {}\n", mv )
     }
 }
 
