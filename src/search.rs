@@ -58,15 +58,12 @@ pub fn quiescence( state: &mut State, mut alpha: i32, beta: i32 ) -> i32 {
 }
 
 pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32 ) -> Variation {
-    // TT should store alpha, beta, bestValue???
-    // move ordering??
+    let ( legal_moves, status ) = state.node_info();
 
-    if depth == 0 {
-        Variation::terminal( quiescence( state, alpha, beta ) )
-    } else {
-        let ( legal_moves, status ) = state.node_info();
-
-        if status == Status::Ongoing {
+    if status == Status::Ongoing {
+        if depth == 0 {
+            Variation::terminal( quiescence( state, alpha, beta ) )
+        } else {
             let irs = state.ir_state();
             let mut var = Variation::terminal( -MATE_VALUE );
 
@@ -80,8 +77,8 @@ pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32 ) -> 
             }
 
             var
-        } else {
-            if status == Status::Checkmate { Variation::terminal( -MATE_VALUE ) } else { Variation::terminal( DRAW_VALUE ) }
         }
+    } else {
+        if status == Status::Checkmate { Variation::terminal( -MATE_VALUE ) } else { Variation::terminal( DRAW_VALUE ) }
     }
 }
