@@ -29,6 +29,12 @@ pub const MG_NPM_LIMIT: i32 = 6130;
 pub const EG_NPM_LIMIT: i32 = 1570;
 pub const MG_PHASE: i32 = 128;
 
+// Tempo Bonus
+// Will depend on your evaluation function of course. The PST Evaluation doesn't account for Tempo at all.
+// Appropriate for "quiet" positions.
+// FIXME: Currently using constant value of Tempo throughout. Revisit this later. Literally just guessed a number....
+pub const TEMPO_BONUS: i32 = 16;
+
 // Game Termination Values
 pub const DRAW_VALUE: i32 = 0;
 pub const MATE_VALUE: i32 = 32000;
@@ -167,5 +173,5 @@ pub fn static_eval( state: &State ) -> i32 {
     npm = cmp::max( EG_NPM_LIMIT, cmp::min( MG_NPM_LIMIT, npm ) );
     let phase = ( ( npm - EG_NPM_LIMIT ) * MG_PHASE ) / ( MG_NPM_LIMIT - EG_NPM_LIMIT );
     let eval = ( phase * eval_mg + ( MG_PHASE - phase ) * eval_eg ) / MG_PHASE;
-    if state.to_move == WHITE { eval } else { -eval }
+    TEMPO_BONUS + if state.to_move == WHITE { eval } else { -eval }
 }
