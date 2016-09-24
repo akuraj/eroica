@@ -1,7 +1,3 @@
-/*
-cargo rustc --release -- -C target-feature=+popcnt -C target-cpu=native
-*/
-
 #![feature(test)]
 extern crate rand;
 extern crate time;
