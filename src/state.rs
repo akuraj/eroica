@@ -1199,7 +1199,7 @@ impl State {
     pub fn is_legal( &self, mv: &Move ) -> bool {
         let castling_path = mv.castling_path(); // zero if not castling
         if castling_path != 0 {
-            self.attacked & castling_path == 0 // No checks on the king's path incluing the starting and ending square
+            self.attacked & castling_path == 0 // No checks on the king's path including the starting and ending square
         } else {
             if mv.piece == ( self.to_move | KING ) {
                 self.attacked & ( 1 << mv.to ) == 0 // King can't move into check
@@ -1251,7 +1251,7 @@ impl State {
                 match p_n_p.count_ones() {
                     0 => ( legal_moves, Status::InsufficientMaterial ),
                     1 => {
-                        let survivor = self.simple_board[ p_n_p.trailing_zeros() as usize ] & !COLOR;
+                        let survivor = self.simple_board[ p_n_p.trailing_zeros() as usize ] & COLOR_MASK;
                         if survivor == BISHOP || survivor == KNIGHT {
                             ( legal_moves, Status::InsufficientMaterial )
                         } else {
@@ -1413,5 +1413,93 @@ impl State {
         }
 
         tactical_moves
+    }
+
+    // Attackers of a given square
+    pub fn attackers( &self, pos: usize, occupancy: u64 ) -> u64 {
+        self.mg.p_captures( pos, BLACK ) & self.bit_board[ WHITE_PAWN ] |
+        self.mg.p_captures( pos, WHITE ) & self.bit_board[ BLACK_PAWN ] |
+        self.mg.n_moves( pos ) & ( self.bit_board[ WHITE_KNIGHT ] | self.bit_board[ BLACK_KNIGHT ] ) |
+        self.mg.b_moves( pos, occupancy ) & ( self.bit_board[ WHITE_BISHOP ] | self.bit_board[ BLACK_BISHOP ] | self.bit_board[ WHITE_QUEEN ] | self.bit_board[ BLACK_QUEEN ] ) |
+        self.mg.r_moves( pos, occupancy ) & ( self.bit_board[ WHITE_ROOK ] | self.bit_board[ BLACK_ROOK ] | self.bit_board[ WHITE_QUEEN ] | self.bit_board[ BLACK_QUEEN ] ) |
+        self.mg.k_captures( pos ) & ( self.bit_board[ WHITE_KING ] | self.bit_board[ BLACK_KING ] )
+    }
+
+    pub fn min_attacker( &self, to_move: u8, piece_type: u8, pos: usize, stm_attackers: u64, occupancy: &mut u64, attackers: &mut u64 ) -> u8 {
+        if piece_type == KING {
+            KING
+        } else {
+            let piece_bb = stm_attackers & self.bit_board[ to_move | piece_type ];
+            if piece_bb == 0 {
+                self.min_attacker( to_move, piece_type + 2, pos, stm_attackers, occupancy, attackers )
+            } else {
+                *occupancy ^= piece_bb & 0u64.wrapping_sub( piece_bb );
+
+                if piece_type == PAWN || piece_type == BISHOP || piece_type == QUEEN {
+                    *attackers |= self.mg.b_moves( pos, *occupancy ) & ( self.bit_board[ WHITE_BISHOP ] |
+                                                                         self.bit_board[ BLACK_BISHOP ] |
+                                                                         self.bit_board[ WHITE_QUEEN ] |
+                                                                         self.bit_board[ BLACK_QUEEN ] );
+                }
+
+                if piece_type == ROOK || piece_type == QUEEN {
+                    *attackers |= self.mg.b_moves( pos, *occupancy ) & ( self.bit_board[ WHITE_ROOK ] |
+                                                                         self.bit_board[ BLACK_ROOK ] |
+                                                                         self.bit_board[ WHITE_QUEEN ] |
+                                                                         self.bit_board[ BLACK_QUEEN ] );
+                }
+
+                *attackers &= *occupancy;
+
+                piece_type
+            }
+        }
+    }
+
+    // Static Exchange Evaluation (SEE)
+    pub fn see( &self, mv: &Move ) -> i32 {
+        let mut to_move = mv.piece & COLOR;
+        assert_eq!( to_move, self.to_move );
+
+        // Castling will have an SEE of 0
+        if mv.castling() != 0 { return 0; }
+
+        let from = mv.from;
+        let to = mv.to;
+        let mut occupancy: u64 = ( self.bit_board[ WHITE_ALL ] | self.bit_board[ BLACK_ALL ] ) ^ ( 1 << from );
+        let mut swap_list: [ i32; 32 ] = [ 0; 32 ];
+        swap_list[ 0 ] = piece_value_mg( mv.capture & COLOR_MASK );
+
+        // en_passant
+        if self.en_passant == mv.to && ( mv.piece & COLOR_MASK ) == PAWN {
+            occupancy ^= self.ep_target_bb();
+            swap_list[ 0 ] = piece_value_mg( PAWN );
+        }
+
+        let mut attackers = self.attackers( to, occupancy ) & occupancy;
+        to_move ^= COLOR;
+        let mut stm_attackers = attackers & self.bit_board[ to_move | ALL ];
+        if stm_attackers == 0 { return swap_list[ 0 ]; }
+
+        let mut next_victim = mv.piece & COLOR_MASK;
+        let mut index: usize = 0;
+
+        while stm_attackers != 0 {
+            index += 1;
+            assert!( index < 32 );
+
+            swap_list[ index ] = -swap_list[ index - 1 ] + piece_value_mg( next_victim );
+            next_victim = self.min_attacker( to_move, PAWN, to, stm_attackers, &mut occupancy, &mut attackers );
+            to_move ^= COLOR;
+            stm_attackers = attackers & self.bit_board[ to_move | ALL ];
+
+            if next_victim == KING { break; }
+        }
+
+        while index > 0 {
+            swap_list[ index - 1 ] = cmp::min( -swap_list[ index ], swap_list[ index - 1 ] );
+        }
+
+        swap_list[ 0 ]
     }
 }

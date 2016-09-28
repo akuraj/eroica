@@ -433,3 +433,16 @@ pub fn line_segment( pos1: usize, pos2: usize ) -> u64 {
         ( MAX >> ( 63 - pos2 ) ) & ( MAX << pos1 )
     }
 }
+
+// Middle-game piece value
+pub fn piece_value_mg( piece_type: u8 ) -> i32 {
+    match piece_type {
+        PAWN => PAWN_VALUE_MG,
+        KNIGHT => KNIGHT_VALUE_MG,
+        BISHOP => BISHOP_VALUE_MG,
+        ROOK => ROOK_VALUE_MG,
+        QUEEN => QUEEN_VALUE_MG,
+        KING => panic!( "Gasp! The King is priceless! How dare you even ask?" ),
+        _ => 0,
+    }
+}

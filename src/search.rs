@@ -2,6 +2,7 @@
 
 use state::*;
 use evaluation::*;
+use consts::*;
 use std::cmp;
 use std::collections::VecDeque;
 

@@ -2,7 +2,6 @@
 
 use std::io;
 use state::*;
-use evaluation::*;
 use search::*;
 use consts::*;
 use pgn_parser::*;

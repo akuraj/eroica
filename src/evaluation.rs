@@ -1,109 +1,9 @@
-//! Static (Heuristic) Evaluation
+//! Evaluation
 
 use state::*;
 use consts::*;
 use utils::*;
 use std::cmp;
-
-/* Values in centi-pawns */
-
-// Piece Values
-// FIXME: Currently, the piece values are borrowed from Stockfish. Will tune this at some point in the future.
-pub const PAWN_VALUE_MG: i32 = 80;
-pub const KNIGHT_VALUE_MG: i32 = 320;
-pub const BISHOP_VALUE_MG: i32 = 330;
-pub const ROOK_VALUE_MG: i32 = 500;
-pub const QUEEN_VALUE_MG: i32 = 990;
-
-pub const PAWN_VALUE_EG: i32 = 100;
-pub const KNIGHT_VALUE_EG: i32 = 350;
-pub const BISHOP_VALUE_EG: i32 = 355;
-pub const ROOK_VALUE_EG: i32 = 530;
-pub const QUEEN_VALUE_EG: i32 = 1040;
-
-// Game Phase Non Pawn Material (NPM) Limits
-// MG values of the pieces are used to compute NPM
-// Don't extrapolate outisde the NPM Limits. FIXME: Revisit this later.
-// Use a Multiplier to preserve resolution -> MG_PHASE
-pub const MG_NPM_LIMIT: i32 = 6130;
-pub const EG_NPM_LIMIT: i32 = 1570;
-pub const MG_PHASE: i32 = 128;
-
-// Tempo Bonus
-// Will depend on your evaluation function of course. The PST Evaluation doesn't account for Tempo at all.
-// Appropriate for "quiet" positions.
-// FIXME: Currently using constant value of Tempo throughout. Revisit this later. Literally just guessed a number....
-pub const TEMPO_BONUS: i32 = 16;
-
-// Game Termination Values
-pub const DRAW_VALUE: i32 = 0;
-pub const MATE_VALUE: i32 = 32000;
-
-// Piece square tables
-// https://chessprogramming.wikispaces.com/Simplified+evaluation+function
-// NOTE: The columns are inverted for both White [ h -> a ] and Black [ a -> h ]. KEEP THE PST SYMMETRIC AROUND THE VERTICAL AXIS!
-pub const PAWN_PST: [ i32; 64 ] = [  0,  0,  0,  0,  0,  0,  0,  0,
-                                    50, 50, 50, 50, 50, 50, 50, 50,
-                                    10, 10, 20, 30, 30, 20, 10, 10,
-                                     5,  5, 10, 25, 25, 10,  5,  5,
-                                     0,  0,  0, 20, 20,  0,  0,  0,
-                                     5, -5,-10,  0,  0,-10, -5,  5,
-                                     5, 10, 10,-20,-20, 10, 10,  5,
-                                     0,  0,  0,  0,  0,  0,  0,  0 ];
-
-pub const KNIGHT_PST: [ i32; 64 ] = [ -50,-40,-30,-30,-30,-30,-40,-50,
-                                      -40,-20,  0,  0,  0,  0,-20,-40,
-                                      -30,  0, 10, 15, 15, 10,  0,-30,
-                                      -30,  5, 15, 20, 20, 15,  5,-30,
-                                      -30,  0, 15, 20, 20, 15,  0,-30,
-                                      -30,  5, 10, 15, 15, 10,  5,-30,
-                                      -40,-20,  0,  5,  5,  0,-20,-40,
-                                      -50,-40,-30,-30,-30,-30,-40,-50 ];
-
-pub const BISHOP_PST: [ i32; 64 ] = [ -20,-10,-10,-10,-10,-10,-10,-20,
-                                      -10,  0,  0,  0,  0,  0,  0,-10,
-                                      -10,  0,  5, 10, 10,  5,  0,-10,
-                                      -10,  5,  5, 10, 10,  5,  5,-10,
-                                      -10,  0, 10, 10, 10, 10,  0,-10,
-                                      -10, 10, 10, 10, 10, 10, 10,-10,
-                                      -10,  5,  0,  0,  0,  0,  5,-10,
-                                      -20,-10,-10,-10,-10,-10,-10,-20 ];
-
-pub const ROOK_PST: [ i32; 64 ] = [ 0,  0,  0,  0,  0,  0,  0,  0,
-                                    5, 10, 10, 10, 10, 10, 10,  5,
-                                   -5,  0,  0,  0,  0,  0,  0, -5,
-                                   -5,  0,  0,  0,  0,  0,  0, -5,
-                                   -5,  0,  0,  0,  0,  0,  0, -5,
-                                   -5,  0,  0,  0,  0,  0,  0, -5,
-                                   -5,  0,  0,  0,  0,  0,  0, -5,
-                                    0,  0,  0,  5,  5,  0,  0,  0 ];
-
-pub const QUEEN_PST: [ i32; 64 ] = [ -20,-10,-10, -5, -5,-10,-10,-20,
-                                     -10,  0,  0,  0,  0,  0,  0,-10,
-                                     -10,  0,  5,  5,  5,  5,  0,-10,
-                                      -5,  0,  5,  5,  5,  5,  0, -5,
-                                      -5,  0,  5,  5,  5,  5,  0, -5,
-                                     -10,  0,  5,  5,  5,  5,  0,-10,
-                                     -10,  0,  0,  0,  0,  0,  0,-10,
-                                     -20,-10,-10, -5, -5,-10,-10,-20 ];
-
-pub const KING_MG_PST: [ i32; 64 ] = [ -30,-40,-40,-50,-50,-40,-40,-30,
-                                       -30,-40,-40,-50,-50,-40,-40,-30,
-                                       -30,-40,-40,-50,-50,-40,-40,-30,
-                                       -30,-40,-40,-50,-50,-40,-40,-30,
-                                       -20,-30,-30,-40,-40,-30,-30,-20,
-                                       -10,-20,-20,-20,-20,-20,-20,-10,
-                                        20, 20,  0,  0,  0,  0, 20, 20,
-                                        20, 30, 10,  0,  0, 10, 30, 20 ];
-
-pub const KING_EG_PST: [ i32; 64 ] = [ -50,-40,-30,-20,-20,-30,-40,-50,
-                                       -30,-20,-10,  0,  0,-10,-20,-30,
-                                       -30,-10, 20, 30, 30, 20,-10,-30,
-                                       -30,-10, 30, 40, 40, 30,-10,-30,
-                                       -30,-10, 30, 40, 40, 30,-10,-30,
-                                       -30,-10, 20, 30, 30, 20,-10,-30,
-                                       -30,-30,  0,  0,  0,  0,-30,-30,
-                                       -50,-30,-30,-30,-30,-30,-30,-50 ];
 
 // Static Evaluation Function, score from the side-to-move's POV
 pub fn static_eval( state: &State ) -> i32 {
@@ -118,29 +18,29 @@ pub fn static_eval( state: &State ) -> i32 {
     let mut eval_mg: i32 = 0;
     let mut eval_eg: i32 = 0;
 
-    let mut piece: u8;
+    let mut piece_type: u8;
     let mut color: u8;
     let mut bb: u64;
     let mut pos: usize;
 
-    for piece_type in ALL_PIECE_TYPES.iter() {
-        piece = *piece_type & !COLOR;
-        color = *piece_type & COLOR;
+    for piece in ALL_PIECE_TYPES.iter() {
+        piece_type = *piece & COLOR_MASK;
+        color = *piece & COLOR;
 
-        let ( piece_val_mg, piece_val_eg, pst ) : ( i32, i32, &[ i32 ] ) = match piece {
+        let ( piece_val_mg, piece_val_eg, pst ) : ( i32, i32, &[ i32 ] ) = match piece_type {
             PAWN => ( PAWN_VALUE_MG, PAWN_VALUE_EG, pawn_pst ),
             KNIGHT => ( KNIGHT_VALUE_MG, KNIGHT_VALUE_EG, knight_pst ),
             BISHOP => ( BISHOP_VALUE_MG, BISHOP_VALUE_EG, bishop_pst ),
             ROOK => ( ROOK_VALUE_MG, ROOK_VALUE_EG, rook_pst ),
             QUEEN => ( QUEEN_VALUE_MG, QUEEN_VALUE_EG, queen_pst ),
-            _ => panic!( "Invalid piece type: {}", piece ),
+            _ => panic!( "Invalid piece type: {}", piece_type ),
         };
 
-        bb = state.bit_board[ *piece_type ];
+        bb = state.bit_board[ *piece ];
         match color {
             WHITE => {
                 while bb != 0 {
-                    if piece != PAWN { npm += piece_val_mg; }
+                    if piece_type != PAWN { npm += piece_val_mg; }
                     pos = pop_lsb_pos( &mut bb );
                     eval_mg += piece_val_mg + pst[ 63 - pos ];
                     eval_eg += piece_val_eg + pst[ 63 - pos ];
@@ -148,7 +48,7 @@ pub fn static_eval( state: &State ) -> i32 {
             },
             BLACK => {
                 while bb != 0 {
-                    if piece != PAWN { npm += piece_val_mg; }
+                    if piece_type != PAWN { npm += piece_val_mg; }
                     pos = pop_lsb_pos( &mut bb );
                     eval_mg -= piece_val_mg + pst[ pos ];
                     eval_eg -= piece_val_eg + pst[ pos ];

@@ -17,11 +17,18 @@ pub mod search;
 pub mod simple_game;
 
 use time::*;
+use state::*;
+use consts::*;
+use search::*;
 
 fn main() {
     let t1 = precise_time_ns();
 
-    simple_game::play();
+    let mut state = State::new();
+    let pv = negamax( &mut state, 7, -MATE_VALUE, MATE_VALUE );
+    println!( "Eval: {}", pv.eval );
+
+    // simple_game::play();
 
     let t2 = precise_time_ns();
     println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );

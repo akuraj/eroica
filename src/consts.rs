@@ -8,6 +8,8 @@ pub const COLOR: u8 = 1;
 pub const WHITE: u8 = 0;
 pub const BLACK: u8 = COLOR;
 
+pub const COLOR_MASK: u8 = !COLOR;
+
 // Piece types ( including EMPTY and ALL )
 pub const EMPTY: u8 = !0;
 pub const PAWN: u8 = 0;
@@ -37,7 +39,7 @@ pub const BLACK_ALL: u8 = BLACK | ALL;
 // All types except kings
 pub const ALL_PIECE_TYPES: [ u8; 10 ] = [ WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN,
                                           BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN ];
-                                          
+
 // Castling types
 pub const WK_CASTLE: u8 = 1;
 pub const BK_CASTLE: u8 = WK_CASTLE << BLACK;
@@ -83,3 +85,107 @@ pub const BKCR: u64 = WKCR << 56;
 pub const BKCR_OCC: u64 = WKCR_OCC << 56;
 pub const BQCR: u64 = WQCR << 56;
 pub const BQCR_OCC: u64 = WQCR_OCC << 56;
+
+/*****************************
+**** Evaluation Constants ****
+*****************************/
+
+/* Values in centi-pawns */
+
+// Piece Values
+// FIXME: Currently, the piece values are borrowed from Stockfish. Will tune this at some point in the future.
+pub const PAWN_VALUE_MG: i32 = 80;
+pub const KNIGHT_VALUE_MG: i32 = 320;
+pub const BISHOP_VALUE_MG: i32 = 330;
+pub const ROOK_VALUE_MG: i32 = 500;
+pub const QUEEN_VALUE_MG: i32 = 990;
+
+pub const PAWN_VALUE_EG: i32 = 100;
+pub const KNIGHT_VALUE_EG: i32 = 350;
+pub const BISHOP_VALUE_EG: i32 = 355;
+pub const ROOK_VALUE_EG: i32 = 530;
+pub const QUEEN_VALUE_EG: i32 = 1040;
+
+// Game Phase Non Pawn Material (NPM) Limits
+// MG values of the pieces are used to compute NPM
+// Don't extrapolate outisde the NPM Limits. FIXME: Revisit this later.
+// Use a Multiplier to preserve resolution -> MG_PHASE
+pub const MG_NPM_LIMIT: i32 = 6130;
+pub const EG_NPM_LIMIT: i32 = 1570;
+pub const MG_PHASE: i32 = 128;
+
+// Tempo Bonus
+// Will depend on your evaluation function of course. The PST Evaluation doesn't account for Tempo at all.
+// Appropriate for "quiet" positions.
+// FIXME: Currently using constant value of Tempo throughout. Revisit this later. Literally just guessed a number....
+pub const TEMPO_BONUS: i32 = 16;
+
+// Game Termination Values
+pub const DRAW_VALUE: i32 = 0;
+pub const MATE_VALUE: i32 = 32000;
+
+// Piece square tables
+// https://chessprogramming.wikispaces.com/Simplified+evaluation+function
+// NOTE: The columns are inverted for both White [ h -> a ] and Black [ a -> h ]. KEEP THE PST SYMMETRIC AROUND THE VERTICAL AXIS!
+pub const PAWN_PST: [ i32; 64 ] = [  0,  0,  0,  0,  0,  0,  0,  0,
+                                    50, 50, 50, 50, 50, 50, 50, 50,
+                                    10, 10, 20, 30, 30, 20, 10, 10,
+                                     5,  5, 10, 25, 25, 10,  5,  5,
+                                     0,  0,  0, 20, 20,  0,  0,  0,
+                                     5, -5,-10,  0,  0,-10, -5,  5,
+                                     5, 10, 10,-20,-20, 10, 10,  5,
+                                     0,  0,  0,  0,  0,  0,  0,  0 ];
+
+pub const KNIGHT_PST: [ i32; 64 ] = [ -50,-40,-30,-30,-30,-30,-40,-50,
+                                      -40,-20,  0,  0,  0,  0,-20,-40,
+                                      -30,  0, 10, 15, 15, 10,  0,-30,
+                                      -30,  5, 15, 20, 20, 15,  5,-30,
+                                      -30,  0, 15, 20, 20, 15,  0,-30,
+                                      -30,  5, 10, 15, 15, 10,  5,-30,
+                                      -40,-20,  0,  5,  5,  0,-20,-40,
+                                      -50,-40,-30,-30,-30,-30,-40,-50 ];
+
+pub const BISHOP_PST: [ i32; 64 ] = [ -20,-10,-10,-10,-10,-10,-10,-20,
+                                      -10,  0,  0,  0,  0,  0,  0,-10,
+                                      -10,  0,  5, 10, 10,  5,  0,-10,
+                                      -10,  5,  5, 10, 10,  5,  5,-10,
+                                      -10,  0, 10, 10, 10, 10,  0,-10,
+                                      -10, 10, 10, 10, 10, 10, 10,-10,
+                                      -10,  5,  0,  0,  0,  0,  5,-10,
+                                      -20,-10,-10,-10,-10,-10,-10,-20 ];
+
+pub const ROOK_PST: [ i32; 64 ] = [ 0,  0,  0,  0,  0,  0,  0,  0,
+                                    5, 10, 10, 10, 10, 10, 10,  5,
+                                   -5,  0,  0,  0,  0,  0,  0, -5,
+                                   -5,  0,  0,  0,  0,  0,  0, -5,
+                                   -5,  0,  0,  0,  0,  0,  0, -5,
+                                   -5,  0,  0,  0,  0,  0,  0, -5,
+                                   -5,  0,  0,  0,  0,  0,  0, -5,
+                                    0,  0,  0,  5,  5,  0,  0,  0 ];
+
+pub const QUEEN_PST: [ i32; 64 ] = [ -20,-10,-10, -5, -5,-10,-10,-20,
+                                     -10,  0,  0,  0,  0,  0,  0,-10,
+                                     -10,  0,  5,  5,  5,  5,  0,-10,
+                                      -5,  0,  5,  5,  5,  5,  0, -5,
+                                      -5,  0,  5,  5,  5,  5,  0, -5,
+                                     -10,  0,  5,  5,  5,  5,  0,-10,
+                                     -10,  0,  0,  0,  0,  0,  0,-10,
+                                     -20,-10,-10, -5, -5,-10,-10,-20 ];
+
+pub const KING_MG_PST: [ i32; 64 ] = [ -30,-40,-40,-50,-50,-40,-40,-30,
+                                       -30,-40,-40,-50,-50,-40,-40,-30,
+                                       -30,-40,-40,-50,-50,-40,-40,-30,
+                                       -30,-40,-40,-50,-50,-40,-40,-30,
+                                       -20,-30,-30,-40,-40,-30,-30,-20,
+                                       -10,-20,-20,-20,-20,-20,-20,-10,
+                                        20, 20,  0,  0,  0,  0, 20, 20,
+                                        20, 30, 10,  0,  0, 10, 30, 20 ];
+
+pub const KING_EG_PST: [ i32; 64 ] = [ -50,-40,-30,-20,-20,-30,-40,-50,
+                                       -30,-20,-10,  0,  0,-10,-20,-30,
+                                       -30,-10, 20, 30, 30, 20,-10,-30,
+                                       -30,-10, 30, 40, 40, 30,-10,-30,
+                                       -30,-10, 30, 40, 40, 30,-10,-30,
+                                       -30,-10, 20, 30, 30, 20,-10,-30,
+                                       -30,-30,  0,  0,  0,  0,-30,-30,
+                                       -50,-30,-30,-30,-30,-30,-30,-50 ];
