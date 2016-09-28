@@ -9,6 +9,7 @@ use hash::*;
 use hashtables::*;
 use std::collections::VecDeque;
 use std::cmp;
+use std::cmp::{Ordering,};
 
 // A mailbox style board that encodes the contents of each square in u8
 pub type SimpleBoard = [ u8; 64 ];
@@ -55,13 +56,14 @@ impl BitBoard {
 }
 
 // Move
-#[derive(Copy,Clone,Debug,PartialEq)]
+#[derive(Copy,Clone,Debug,PartialEq,Eq)]
 pub struct Move {
     pub piece: u8,
     pub from: usize,
     pub to: usize,
     pub capture: u8,
     pub promotion: u8,
+    pub see: i32,
 }
 
 impl Move {
@@ -114,7 +116,20 @@ impl Move {
                from: pos,
                to: ERR_POS,
                capture: EMPTY,
-               promotion: EMPTY, }
+               promotion: EMPTY,
+               see: 0, }
+    }
+}
+
+impl Ord for Move {
+    fn cmp( &self, other: &Move ) -> Ordering {
+        other.see.cmp( &self.see )
+    }
+}
+
+impl PartialOrd for Move {
+    fn partial_cmp( &self, other: &Move ) -> Option<Ordering> {
+        Some( self.cmp( other ) )
     }
 }
 
@@ -1222,15 +1237,21 @@ impl State {
     }
 
     pub fn node_info( &self ) -> ( Vec<Move>, Status ) {
-        let moves = self.moves();
+        let mut moves = self.moves();
 
         // Hmm, this is faster than both (by ~25%) -
         // 1. legal_moves = moves.into_iter().filter( |x| self.is_legal( &x ) ).collect();
         // 2. legal_moves = moves.iter().filter( |x| self.is_legal( x ) ).map( |x| *x ).collect();
         let mut legal_moves: Vec<Move> = Vec::new();
-        for mv in &moves {
-            if self.is_legal( mv ) { legal_moves.push( *mv ); }
+        for mv in moves.iter_mut() {
+            if self.is_legal( mv ) {
+                mv.see = self.see( mv );
+                legal_moves.push( *mv );
+            }
         }
+
+        // Sort by SEE
+        legal_moves.sort();
 
         // compute status and return
         if legal_moves.len() == 0 {
@@ -1425,6 +1446,7 @@ impl State {
         self.mg.k_captures( pos ) & ( self.bit_board[ WHITE_KING ] | self.bit_board[ BLACK_KING ] )
     }
 
+    // Returns the least valuable attacker and updates the attackers and occupancy bit_boards. Also checks for x-ray attacks.
     pub fn min_attacker( &self, to_move: u8, piece_type: u8, pos: usize, stm_attackers: u64, occupancy: &mut u64, attackers: &mut u64 ) -> u8 {
         if piece_type == KING {
             KING
@@ -1435,6 +1457,7 @@ impl State {
             } else {
                 *occupancy ^= piece_bb & 0u64.wrapping_sub( piece_bb );
 
+                // Diagonal x-ray
                 if piece_type == PAWN || piece_type == BISHOP || piece_type == QUEEN {
                     *attackers |= self.mg.b_moves( pos, *occupancy ) & ( self.bit_board[ WHITE_BISHOP ] |
                                                                          self.bit_board[ BLACK_BISHOP ] |
@@ -1442,6 +1465,7 @@ impl State {
                                                                          self.bit_board[ BLACK_QUEEN ] );
                 }
 
+                // Orthogonal x-ray
                 if piece_type == ROOK || piece_type == QUEEN {
                     *attackers |= self.mg.b_moves( pos, *occupancy ) & ( self.bit_board[ WHITE_ROOK ] |
                                                                          self.bit_board[ BLACK_ROOK ] |
@@ -1476,6 +1500,7 @@ impl State {
             swap_list[ 0 ] = piece_value_mg( PAWN );
         }
 
+        // If we have nobody defending the target square, we are done.
         let mut attackers = self.attackers( to, occupancy ) & occupancy;
         to_move ^= COLOR;
         let mut stm_attackers = attackers & self.bit_board[ to_move | ALL ];
