@@ -1498,6 +1498,7 @@ impl State {
 
         while index > 0 {
             swap_list[ index - 1 ] = cmp::min( -swap_list[ index ], swap_list[ index - 1 ] );
+            index -= 1;
         }
 
         swap_list[ 0 ]
