@@ -1515,7 +1515,7 @@ impl State {
 
             swap_list[ index ] = -swap_list[ index - 1 ] + piece_value_mg( next_victim );
             next_victim = self.min_attacker( to_move, PAWN, to, stm_attackers, &mut occupancy, &mut attackers );
-            
+
             if next_victim == KING {
                 if stm_attackers != attackers { index -= 1; } // Can't capture a defended piece with the King
                 break; // the end of the find-victim cycle
