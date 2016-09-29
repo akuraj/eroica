@@ -1449,11 +1449,11 @@ impl State {
     // Returns the least valuable attacker and updates the attackers and occupancy bit_boards. Also checks for x-ray attacks.
     pub fn min_attacker( &self, to_move: u8, piece_type: u8, pos: usize, stm_attackers: u64, occupancy: &mut u64, attackers: &mut u64 ) -> u8 {
         if piece_type == KING {
-            KING
+            KING // No need to update the bit_boards here, this is the end of the find-victim cycle
         } else {
             let piece_bb = stm_attackers & self.bit_board[ to_move | piece_type ];
             if piece_bb == 0 {
-                self.min_attacker( to_move, piece_type + 2, pos, stm_attackers, occupancy, attackers )
+                self.min_attacker( to_move, piece_type + 2, pos, stm_attackers, occupancy, attackers ) // piece_type + 2 gives you the successor. P->N->B->R->Q->K
             } else {
                 *occupancy ^= piece_bb & 0u64.wrapping_sub( piece_bb );
 
@@ -1495,7 +1495,7 @@ impl State {
         swap_list[ 0 ] = piece_value_mg( mv.capture & COLOR_MASK );
 
         // en_passant
-        if self.en_passant == mv.to && ( mv.piece & COLOR_MASK ) == PAWN {
+        if self.en_passant == mv.to && mv.piece & COLOR_MASK == PAWN {
             occupancy ^= self.ep_target_bb();
             swap_list[ 0 ] = piece_value_mg( PAWN );
         }
@@ -1515,10 +1515,14 @@ impl State {
 
             swap_list[ index ] = -swap_list[ index - 1 ] + piece_value_mg( next_victim );
             next_victim = self.min_attacker( to_move, PAWN, to, stm_attackers, &mut occupancy, &mut attackers );
+            
+            if next_victim == KING {
+                if stm_attackers != attackers { index -= 1; } // Can't capture a defended piece with the King
+                break; // the end of the find-victim cycle
+            }
+
             to_move ^= COLOR;
             stm_attackers = attackers & self.bit_board[ to_move | ALL ];
-
-            if next_victim == KING { break; }
         }
 
         while index > 0 {
