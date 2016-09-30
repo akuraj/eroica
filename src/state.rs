@@ -859,30 +859,12 @@ impl State {
         let mut pos: usize;
         let mut moves: Vec<Move> = Vec::new();
 
-        // QUEEN
-        piece = side | QUEEN;
+        // PAWN
+        piece = side | PAWN;
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = self.mg.q_moves( pos, occupancy ) & not_friendly;
-            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
-        }
-
-        // ROOK
-        piece = side | ROOK;
-        bb = self.bit_board[ piece ];
-        while bb != 0 {
-            pos = pop_lsb_pos( &mut bb );
-            moves_bb = self.mg.r_moves( pos, occupancy ) & not_friendly;
-            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
-        }
-
-        // BISHOP
-        piece = side | BISHOP;
-        bb = self.bit_board[ piece ];
-        while bb != 0 {
-            pos = pop_lsb_pos( &mut bb );
-            moves_bb = self.mg.b_moves( pos, occupancy ) & not_friendly;
+            moves_bb = self.mg.p_moves( pos, side, occupancy_w_ep ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
@@ -895,12 +877,30 @@ impl State {
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
-        // PAWN
-        piece = side | PAWN;
+        // BISHOP
+        piece = side | BISHOP;
         bb = self.bit_board[ piece ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            moves_bb = self.mg.p_moves( pos, side, occupancy_w_ep ) & not_friendly;
+            moves_bb = self.mg.b_moves( pos, occupancy ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        // ROOK
+        piece = side | ROOK;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = self.mg.r_moves( pos, occupancy ) & not_friendly;
+            self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
+        }
+
+        // QUEEN
+        piece = side | QUEEN;
+        bb = self.bit_board[ piece ];
+        while bb != 0 {
+            pos = pop_lsb_pos( &mut bb );
+            moves_bb = self.mg.q_moves( pos, occupancy ) & not_friendly;
             self.add_moves_from_bb( piece, pos, &mut moves_bb, &mut moves );
         }
 
@@ -942,9 +942,7 @@ impl State {
 
         let mut bb: u64;
         let mut pos: usize;
-        let mut o_attacks: u64;
-        let mut r_attacks: u64;
-        let mut b_attacks: u64;
+        let mut attacks: u64;
 
         /**** Enemies ****/
 
@@ -952,11 +950,11 @@ impl State {
         bb = self.bit_board[ opp_side | ROOK ] | self.bit_board[ opp_side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            r_attacks = self.mg.r_moves( pos, occupancy_wo_king );
-            self.control[ pos ] |= r_attacks;
-            self.attacked |= r_attacks;
+            attacks = self.mg.r_moves( pos, occupancy_wo_king );
+            self.control[ pos ] |= attacks;
+            self.attacked |= attacks;
 
-            if r_attacks & king != 0 {
+            if attacks & king != 0 {
                 self.num_checks += 1;
                 self.check_blocker &= line_segment( pos, king_pos ) ^ king;
             }
@@ -966,11 +964,11 @@ impl State {
         bb = self.bit_board[ opp_side | BISHOP ] | self.bit_board[ opp_side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            b_attacks = self.mg.b_moves( pos, occupancy_wo_king );
-            self.control[ pos ] |= b_attacks;
-            self.attacked |= b_attacks;
+            attacks = self.mg.b_moves( pos, occupancy_wo_king );
+            self.control[ pos ] |= attacks;
+            self.attacked |= attacks;
 
-            if b_attacks & king != 0 {
+            if attacks & king != 0 {
                 self.num_checks += 1;
                 self.check_blocker &= line_segment( pos, king_pos ) ^ king;
             }
@@ -980,11 +978,11 @@ impl State {
         bb = self.bit_board[ opp_side | KNIGHT ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            o_attacks = self.mg.n_moves( pos );
-            self.control[ pos ] |= o_attacks;
-            self.attacked |= o_attacks;
+            attacks = self.mg.n_moves( pos );
+            self.control[ pos ] |= attacks;
+            self.attacked |= attacks;
 
-            if o_attacks & king != 0 {
+            if attacks & king != 0 {
                 self.num_checks += 1;
                 self.check_blocker &= 1 << pos;
             }
@@ -994,11 +992,11 @@ impl State {
         bb = self.bit_board[ opp_side | PAWN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            o_attacks = self.mg.p_captures( pos, opp_side );
-            self.control[ pos ] |= o_attacks;
-            self.attacked |= o_attacks;
+            attacks = self.mg.p_captures( pos, opp_side );
+            self.control[ pos ] |= attacks;
+            self.attacked |= attacks;
 
-            if o_attacks & king != 0 {
+            if attacks & king != 0 {
                 self.num_checks += 1;
                 self.check_blocker &= 1 << pos;
             }
@@ -1008,9 +1006,9 @@ impl State {
         bb = self.bit_board[ opp_side | KING ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            o_attacks = self.mg.k_captures( pos );
-            self.control[ pos ] |= o_attacks;
-            self.attacked |= o_attacks;
+            attacks = self.mg.k_captures( pos );
+            self.control[ pos ] |= attacks;
+            self.attacked |= attacks;
         }
 
         /**** Friends ****/
@@ -1019,45 +1017,45 @@ impl State {
         bb = self.bit_board[ side | ROOK ] | self.bit_board[ side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            r_attacks = self.mg.r_moves( pos, occupancy );
-            self.control[ pos ] |= r_attacks;
-            self.defended |= r_attacks;
+            attacks = self.mg.r_moves( pos, occupancy );
+            self.control[ pos ] |= attacks;
+            self.defended |= attacks;
         }
 
         // BISHOP & QUEEN - diagonal attacks
         bb = self.bit_board[ side | BISHOP ] | self.bit_board[ side | QUEEN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            b_attacks = self.mg.b_moves( pos, occupancy );
-            self.control[ pos ] |= b_attacks;
-            self.defended |= b_attacks;
+            attacks = self.mg.b_moves( pos, occupancy );
+            self.control[ pos ] |= attacks;
+            self.defended |= attacks;
         }
 
         // KNIGHT
         bb = self.bit_board[ side | KNIGHT ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            o_attacks = self.mg.n_moves( pos );
-            self.control[ pos ] |= o_attacks;
-            self.defended |= o_attacks;
+            attacks = self.mg.n_moves( pos );
+            self.control[ pos ] |= attacks;
+            self.defended |= attacks;
         }
 
         // PAWN
         bb = self.bit_board[ side | PAWN ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            o_attacks = self.mg.p_captures( pos, side );
-            self.control[ pos ] |= o_attacks;
-            self.defended |= o_attacks;
+            attacks = self.mg.p_captures( pos, side );
+            self.control[ pos ] |= attacks;
+            self.defended |= attacks;
         }
 
         // KING
         bb = self.bit_board[ side | KING ];
         while bb != 0 {
             pos = pop_lsb_pos( &mut bb );
-            o_attacks = self.mg.k_captures( pos );
-            self.control[ pos ] |= o_attacks;
-            self.defended |= o_attacks;
+            attacks = self.mg.k_captures( pos );
+            self.control[ pos ] |= attacks;
+            self.defended |= attacks;
         }
 
         assert!( self.defended & opp_king == 0, "Enemy King is in check - it could be Checkmate - or the last move was illegal!" );
@@ -1217,7 +1215,7 @@ impl State {
             self.attacked & castling_path == 0 // No checks on the king's path including the starting and ending square
         } else {
             if mv.piece == ( self.to_move | KING ) {
-                self.attacked & ( 1 << mv.to ) == 0 // King can't move into check
+                self.attacked & ( 1 << mv.to ) == 0 // The King can't move into check
             } else if self.num_checks > 1 {
                 false // Double check, only the King can move
             } else {
