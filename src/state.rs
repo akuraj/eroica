@@ -1511,7 +1511,6 @@ impl State {
 
         while stm_attackers != 0 {
             index += 1;
-            assert!( index < 32 );
 
             swap_list[ index ] = -swap_list[ index - 1 ] + piece_value_mg( next_victim );
             next_victim = self.min_attacker( to_move, PAWN, to, stm_attackers, &mut occupancy, &mut attackers );
