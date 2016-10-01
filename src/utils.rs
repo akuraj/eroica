@@ -446,3 +446,9 @@ pub fn piece_value_mg( piece_type: u8 ) -> i32 {
         _ => 0,
     }
 }
+
+// Returns 1 if bit_board has at least two pieces on opposite colors
+#[inline]
+pub fn has_opp_color_pair( bb: u64 ) -> i32 {
+    ( bb & ALL_WHITE_SQUARES != 0 && bb & ALL_BLACK_SQUARES != 0 ) as i32
+}

@@ -58,6 +58,11 @@ pub fn static_eval( state: &State ) -> i32 {
         }
     }
 
+    // Bishop Pair Bonus
+    let bishop_pair_bonus = ( has_opp_color_pair( state.bit_board[ WHITE_BISHOP ] ) - has_opp_color_pair( state.bit_board[ BLACK_BISHOP ] ) ) * BISHOP_PAIR_BONUS;
+    eval_mg += bishop_pair_bonus;
+    eval_eg += bishop_pair_bonus;
+
     // Kings
     bb = state.bit_board[ WHITE_KING ];
     pos = pop_lsb_pos( &mut bb );

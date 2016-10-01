@@ -60,7 +60,7 @@ pub const A_FILE: u64 = 0x0101010101010101u64;
 pub const A_FILE_NE: u64 = 0x0001010101010100u64; // NO EDGES
 pub const A1_H8: u64 = 0x8040201008040201u64;
 pub const A8_H1: u64 = 0x0102040810204080u64;
-pub const LRT: u64 = 0x0080C0E0F0F8FCFE; // i > j
+pub const LRT: u64 = 0x0080C0E0F0F8FCFEu64; // i > j
 pub const ULT: u64 = !LRT; // i <= j // includes A1_H8
 pub const URT: u64 = 0xFEFCF8F0E0C08000u64; // i + j > 7
 pub const LLT: u64 = !URT; // i + j <= 7 // includes A8_H1
@@ -85,6 +85,8 @@ pub const BKCR: u64 = WKCR << 56;
 pub const BKCR_OCC: u64 = WKCR_OCC << 56;
 pub const BQCR: u64 = WQCR << 56;
 pub const BQCR_OCC: u64 = WQCR_OCC << 56;
+pub const ALL_WHITE_SQUARES: u64 = 0x55AA55AA55AA55AAu64;
+pub const ALL_BLACK_SQUARES: u64 = 0xAA55AA55AA55AA55u64;
 
 /*****************************
 **** Evaluation Constants ****
@@ -101,7 +103,7 @@ pub const ROOK_VALUE_MG: i32 = 500;
 pub const QUEEN_VALUE_MG: i32 = 990;
 
 pub const PAWN_VALUE_EG: i32 = 100;
-pub const KNIGHT_VALUE_EG: i32 = 350;
+pub const KNIGHT_VALUE_EG: i32 = 345;
 pub const BISHOP_VALUE_EG: i32 = 355;
 pub const ROOK_VALUE_EG: i32 = 530;
 pub const QUEEN_VALUE_EG: i32 = 1040;
@@ -114,15 +116,18 @@ pub const MG_NPM_LIMIT: i32 = 6130;
 pub const EG_NPM_LIMIT: i32 = 1570;
 pub const MG_PHASE: i32 = 128;
 
+// Game Termination Values
+pub const DRAW_VALUE: i32 = 0;
+pub const MATE_VALUE: i32 = 32000;
+
 // Tempo Bonus
 // Will depend on your evaluation function of course. The PST Evaluation doesn't account for Tempo at all.
 // Appropriate for "quiet" positions.
 // FIXME: Currently using constant value of Tempo throughout. Revisit this later. Literally just guessed a number....
 pub const TEMPO_BONUS: i32 = 16;
 
-// Game Termination Values
-pub const DRAW_VALUE: i32 = 0;
-pub const MATE_VALUE: i32 = 32000;
+// Bishop Pair Bonus
+pub const BISHOP_PAIR_BONUS: i32 = 50;
 
 // Piece square tables
 // https://chessprogramming.wikispaces.com/Simplified+evaluation+function
