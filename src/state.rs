@@ -64,6 +64,7 @@ pub struct Move {
     pub capture: u8,
     pub promotion: u8,
     pub see: i32,
+    pub pst_eval: PSTEval,
 }
 
 impl Move {
@@ -117,13 +118,20 @@ impl Move {
                to: ERR_POS,
                capture: EMPTY,
                promotion: EMPTY,
-               see: 0, }
+               see: 0,
+               pst_eval: PSTEval::new(), }
+    }
+
+    // Score: Tapered Evaluation using PST + SEE
+    #[inline]
+    pub fn score( &self ) -> i32 {
+        self.pst_eval.tapered_eval( self.piece & COLOR ) + self.see
     }
 }
 
 impl Ord for Move {
     fn cmp( &self, other: &Move ) -> Ordering {
-        other.see.cmp( &self.see )
+        other.score().cmp( &self.score() )
     }
 }
 
@@ -163,6 +171,32 @@ impl fmt::Display for Move {
     }
 }
 
+// PSTEval: Stores info required to compute Tapered Eval
+#[derive(Copy,Clone,Debug,PartialEq,Eq)]
+pub struct PSTEval {
+    pub npm: i32,
+    pub eval_mg: i32,
+    pub eval_eg: i32,
+}
+
+impl PSTEval {
+    pub fn new() -> Self {
+        PSTEval {
+            npm: 0,
+            eval_mg: 0,
+            eval_eg: 0,
+        }
+    }
+
+    #[inline]
+    pub fn tapered_eval( &self, to_move: u8 ) -> i32 {
+        // Tapered Eval from side-to-move's POV
+        let phase = ( ( cmp::max( EG_NPM_LIMIT, cmp::min( MG_NPM_LIMIT, self.npm ) ) - EG_NPM_LIMIT ) * MG_PHASE ) / ( MG_NPM_LIMIT - EG_NPM_LIMIT );
+        let eval = ( phase * self.eval_mg + ( MG_PHASE - phase ) * self.eval_eg ) / MG_PHASE;
+        TEMPO_BONUS + if to_move == WHITE { eval } else { -eval }
+    }
+}
+
 // Game status enum
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum Status {
@@ -198,6 +232,9 @@ pub struct IRState {
 
     // Hash
     pub hash: u64,
+
+    // PSTEval
+    pub pst_eval: PSTEval,
 }
 
 // Full State
@@ -231,6 +268,9 @@ pub struct State {
 
     // History
     pub history: VecDeque<u64>,
+
+    // PSTEval
+    pub pst_eval: PSTEval,
 }
 
 impl fmt::Display for State {
@@ -313,7 +353,8 @@ impl State {
                                 ep_possible: false,
                                 hg: HashGen::new(),
                                 hash: 0,
-                                history: VecDeque::new(), };
+                                history: VecDeque::new(),
+                                pst_eval: PSTEval::new(), };
 
         while let Some( ( section_number, section ) ) = iter.next() {
             match section_number {
@@ -394,6 +435,7 @@ impl State {
         state.compute_control();
         state.state_check();
         state.set_hash();
+        state.set_pst_eval();
 
         state
     }
@@ -532,6 +574,7 @@ impl State {
         self.control = irs.control;
         self.ep_possible = irs.ep_possible;
         self.hash = irs.hash;
+        self.pst_eval = irs.pst_eval;
     }
 
     pub fn ir_state( &self ) -> IRState {
@@ -545,7 +588,8 @@ impl State {
                  a_pins: self.a_pins,
                  control: self.control,
                  ep_possible: self.ep_possible,
-                 hash: self.hash, }
+                 hash: self.hash,
+                 pst_eval: self.pst_eval, }
     }
 
     pub fn make( &mut self, mv: &Move ) {
@@ -710,6 +754,9 @@ impl State {
         if self.ep_possible {
             self.hash ^= self.hg.ep( self.en_passant ); // HASH_UPDATE
         }
+
+        // Copy over PSTEval from mv
+        self.pst_eval = mv.pst_eval;
     }
 
     pub fn unmake( &mut self, mv: &Move, irs: &IRState ) {
@@ -1209,6 +1256,7 @@ impl State {
         }
     }
 
+    // Works for pseudo-legal moves generated for the position in question. Can't use it for any random move.
     pub fn is_legal( &self, mv: &Move ) -> bool {
         let castling_path = mv.castling_path(); // zero if not castling
         if castling_path != 0 {
@@ -1244,11 +1292,12 @@ impl State {
         for mv in moves.iter_mut() {
             if self.is_legal( mv ) {
                 mv.see = self.see( mv );
+                self.incremental_pst_eval( mv );
                 legal_moves.push( *mv );
             }
         }
 
-        // Sort by SEE
+        // Sort by PSTEval + SEE
         legal_moves.sort();
 
         // compute status and return
@@ -1479,9 +1528,9 @@ impl State {
     }
 
     // Static Exchange Evaluation (SEE)
+    // NOTE: The first ply is forced and will be scored by the static evaluation (pst_eval), and will not be counted in the SEE
     pub fn see( &self, mv: &Move ) -> i32 {
         let mut to_move = mv.piece & COLOR;
-        assert_eq!( to_move, self.to_move );
 
         // Castling will have an SEE of 0
         if mv.castling() != 0 { return 0; }
@@ -1490,13 +1539,9 @@ impl State {
         let to = mv.to;
         let mut occupancy: u64 = ( self.bit_board[ WHITE_ALL ] | self.bit_board[ BLACK_ALL ] ) ^ ( 1 << from );
         let mut swap_list: [ i32; 32 ] = [ 0; 32 ];
-        swap_list[ 0 ] = piece_value_mg( mv.capture & COLOR_MASK );
 
         // en_passant
-        if self.en_passant == mv.to && mv.piece & COLOR_MASK == PAWN {
-            occupancy ^= self.ep_target_bb();
-            swap_list[ 0 ] = piece_value_mg( PAWN );
-        }
+        if self.en_passant == mv.to && mv.piece & COLOR_MASK == PAWN { occupancy ^= self.ep_target_bb(); }
 
         // If we have nobody defending the target square, we are done.
         let mut attackers = self.attackers( to, occupancy ) & occupancy;
@@ -1504,7 +1549,8 @@ impl State {
         let mut stm_attackers = attackers & self.bit_board[ to_move | ALL ];
         if stm_attackers == 0 { return swap_list[ 0 ]; }
 
-        let mut next_victim = mv.piece & COLOR_MASK;
+        // Update next_victim if we have a promotion
+        let mut next_victim = if mv.promotion == EMPTY { mv.piece & COLOR_MASK } else { mv.promotion & COLOR_MASK };
         let mut index: usize = 0;
 
         while stm_attackers != 0 {
@@ -1528,5 +1574,288 @@ impl State {
         }
 
         swap_list[ 0 ]
+    }
+
+    // Calculate PSTEval from scratch and set
+    pub fn set_pst_eval( &mut self ) {
+        // FIXME: Find a better way to do this.
+        let pawn_pst: &[ i32 ] = &PAWN_PST;
+        let knight_pst: &[ i32 ] = &KNIGHT_PST;
+        let bishop_pst: &[ i32 ] = &BISHOP_PST;
+        let rook_pst: &[ i32 ] = &ROOK_PST;
+        let queen_pst: &[ i32 ] = &QUEEN_PST;
+
+        let mut npm: i32 = 0;
+        let mut eval_mg: i32 = 0;
+        let mut eval_eg: i32 = 0;
+
+        let mut piece_type: u8;
+        let mut color: u8;
+        let mut bb: u64;
+        let mut pos: usize;
+
+        for piece in ALL_PIECE_TYPES.iter() {
+            piece_type = *piece & COLOR_MASK;
+            color = *piece & COLOR;
+
+            let ( piece_val_mg, piece_val_eg, pst ) : ( i32, i32, &[ i32 ] ) = match piece_type {
+                PAWN => ( PAWN_VALUE_MG, PAWN_VALUE_EG, pawn_pst ),
+                KNIGHT => ( KNIGHT_VALUE_MG, KNIGHT_VALUE_EG, knight_pst ),
+                BISHOP => ( BISHOP_VALUE_MG, BISHOP_VALUE_EG, bishop_pst ),
+                ROOK => ( ROOK_VALUE_MG, ROOK_VALUE_EG, rook_pst ),
+                QUEEN => ( QUEEN_VALUE_MG, QUEEN_VALUE_EG, queen_pst ),
+                _ => panic!( "Invalid piece type: {}", piece_type ),
+            };
+
+            bb = self.bit_board[ *piece ];
+            match color {
+                WHITE => {
+                    while bb != 0 {
+                        if piece_type != PAWN { npm += piece_val_mg; }
+                        pos = pop_lsb_pos( &mut bb );
+                        eval_mg += piece_val_mg + pst[ 63 - pos ];
+                        eval_eg += piece_val_eg + pst[ 63 - pos ];
+                    }
+                },
+                BLACK => {
+                    while bb != 0 {
+                        if piece_type != PAWN { npm += piece_val_mg; }
+                        pos = pop_lsb_pos( &mut bb );
+                        eval_mg -= piece_val_mg + pst[ pos ];
+                        eval_eg -= piece_val_eg + pst[ pos ];
+                    }
+                },
+                _ => panic!( "Invalid color: {}", color ),
+            }
+        }
+
+        // Bishop Pair Bonus
+        let bishop_pair_bonus = ( has_opp_color_pair( self.bit_board[ WHITE_BISHOP ] ) - has_opp_color_pair( self.bit_board[ BLACK_BISHOP ] ) ) * BISHOP_PAIR_BONUS;
+        eval_mg += bishop_pair_bonus;
+        eval_eg += bishop_pair_bonus;
+
+        // Kings
+        bb = self.bit_board[ WHITE_KING ];
+        pos = pop_lsb_pos( &mut bb );
+        eval_mg += KING_MG_PST[ 63 - pos ];
+        eval_eg += KING_EG_PST[ 63 - pos ];
+
+        bb = self.bit_board[ BLACK_KING ];
+        pos = pop_lsb_pos( &mut bb );
+        eval_mg -= KING_MG_PST[ pos ];
+        eval_eg -= KING_EG_PST[ pos ];
+
+        self.pst_eval.npm = npm;
+        self.pst_eval.eval_mg = eval_mg;
+        self.pst_eval.eval_eg = eval_eg;
+    }
+
+    // Tapered Evaluation using PST
+    pub fn pst_tapered_eval( &self ) -> i32 {
+        self.pst_eval.tapered_eval( self.to_move )
+    }
+
+    pub fn incremental_pst_eval( &self, mv: &mut Move ) {
+        // FIXME: Find a better way to do this.
+        let pawn_pst: &[ i32 ] = &PAWN_PST;
+        let knight_pst: &[ i32 ] = &KNIGHT_PST;
+        let bishop_pst: &[ i32 ] = &BISHOP_PST;
+        let rook_pst: &[ i32 ] = &ROOK_PST;
+        let queen_pst: &[ i32 ] = &QUEEN_PST;
+
+        let mut d_npm: i32 = 0;
+        let mut d_eval_mg: i32 = 0;
+        let mut d_eval_eg: i32 = 0;
+
+        let mut bishop_bb_w = self.bit_board[ WHITE_BISHOP ];
+        let mut bishop_bb_b = self.bit_board[ BLACK_BISHOP ];
+        let mut d_bishop_pair_bonus = -( has_opp_color_pair( bishop_bb_w ) - has_opp_color_pair( bishop_bb_b ) ) * BISHOP_PAIR_BONUS;
+
+        // Mover
+        match mv.piece {
+            WHITE_KING => {
+                d_eval_mg += KING_MG_PST[ 63 - mv.to ] - KING_MG_PST[ 63 - mv.from ];
+                d_eval_eg += KING_EG_PST[ 63 - mv.to ] - KING_EG_PST[ 63 - mv.from ];
+            },
+            BLACK_KING => {
+                d_eval_mg -= KING_MG_PST[ mv.to ] - KING_MG_PST[ mv.from ];
+                d_eval_eg -= KING_EG_PST[ mv.to ] - KING_EG_PST[ mv.from ];
+            },
+            _ => {
+                let pst: &[ i32 ] = match mv.piece & COLOR_MASK {
+                    PAWN => pawn_pst,
+                    KNIGHT => knight_pst,
+                    BISHOP => bishop_pst,
+                    ROOK => rook_pst,
+                    QUEEN => queen_pst,
+                    _ => panic!( "Invalid piece type: {}", mv.piece & COLOR_MASK ),
+                };
+
+                match mv.piece & COLOR {
+                    WHITE => {
+                        d_eval_mg += pst[ 63 - mv.to ] - pst[ 63 - mv.from ];
+                        d_eval_eg += pst[ 63 - mv.to ] - pst[ 63 - mv.from ];
+                    },
+                    BLACK => {
+                        d_eval_mg -= pst[ mv.to ] - pst[ mv.from ];
+                        d_eval_eg -= pst[ mv.to ] - pst[ mv.from ];
+                    },
+                    _ => panic!( "Invalid color: {}", mv.piece & COLOR ),
+                }
+            },
+        }
+
+        // Capture
+        if mv.capture != EMPTY {
+            let ( piece_val_mg, piece_val_eg, pst ) : ( i32, i32, &[ i32 ] ) = match mv.capture & COLOR_MASK {
+                PAWN => ( PAWN_VALUE_MG, PAWN_VALUE_EG, pawn_pst ),
+                KNIGHT => ( KNIGHT_VALUE_MG, KNIGHT_VALUE_EG, knight_pst ),
+                BISHOP => {
+                    if mv.capture & COLOR == WHITE { bishop_bb_w ^= 1 << mv.to; } else { bishop_bb_b ^= 1 << mv.to; }
+                    ( BISHOP_VALUE_MG, BISHOP_VALUE_EG, bishop_pst )
+                },
+                ROOK => ( ROOK_VALUE_MG, ROOK_VALUE_EG, rook_pst ),
+                QUEEN => ( QUEEN_VALUE_MG, QUEEN_VALUE_EG, queen_pst ),
+                _ => panic!( "Invalid piece type: {}", mv.capture & COLOR_MASK ),
+            };
+
+            match mv.capture & COLOR {
+                WHITE => {
+                    d_eval_mg -= piece_val_mg + pst[ 63 - mv.to ];
+                    d_eval_eg -= piece_val_eg + pst[ 63 - mv.to ];
+                },
+                BLACK => {
+                    d_eval_mg += piece_val_mg + pst[ mv.to ];
+                    d_eval_eg += piece_val_eg + pst[ mv.to ];
+                },
+                _ => panic!( "Invalid color: {}", mv.capture & COLOR ),
+            }
+
+            if mv.capture & COLOR_MASK != PAWN {
+                d_npm -= piece_val_mg;
+            }
+        }
+
+        // Promotion
+        if mv.is_promotion() {
+            match mv.piece & COLOR {
+                WHITE => {
+                    d_eval_mg -= PAWN_VALUE_MG + PAWN_PST[ 63 - mv.to ];
+                    d_eval_eg -= PAWN_VALUE_EG + PAWN_PST[ 63 - mv.to ];
+                },
+                BLACK => {
+                    d_eval_mg += PAWN_VALUE_MG + PAWN_PST[ mv.to ];
+                    d_eval_eg += PAWN_VALUE_EG + PAWN_PST[ mv.to ];
+                },
+                _ => panic!( "Invalid color: {}", mv.piece & COLOR ),
+            }
+
+            let ( piece_val_mg, piece_val_eg, pst ) : ( i32, i32, &[ i32 ] ) = match mv.promotion & COLOR_MASK {
+                PAWN => ( PAWN_VALUE_MG, PAWN_VALUE_EG, pawn_pst ),
+                KNIGHT => ( KNIGHT_VALUE_MG, KNIGHT_VALUE_EG, knight_pst ),
+                BISHOP => {
+                    if mv.promotion & COLOR == WHITE { bishop_bb_w ^= 1 << mv.to; } else { bishop_bb_b ^= 1 << mv.to; }
+                    ( BISHOP_VALUE_MG, BISHOP_VALUE_EG, bishop_pst )
+                },
+                ROOK => ( ROOK_VALUE_MG, ROOK_VALUE_EG, rook_pst ),
+                QUEEN => ( QUEEN_VALUE_MG, QUEEN_VALUE_EG, queen_pst ),
+                _ => panic!( "Invalid piece type: {}", mv.promotion & COLOR_MASK ),
+            };
+
+            match mv.promotion & COLOR {
+                WHITE => {
+                    d_eval_mg += piece_val_mg + pst[ 63 - mv.to ];
+                    d_eval_eg += piece_val_eg + pst[ 63 - mv.to ];
+                },
+                BLACK => {
+                    d_eval_mg -= piece_val_mg + pst[ mv.to ];
+                    d_eval_eg -= piece_val_eg + pst[ mv.to ];
+                },
+                _ => panic!( "Invalid color: {}", mv.promotion & COLOR ),
+            }
+
+            d_npm += piece_val_mg;
+        }
+
+        // En_passant
+        if mv.piece & COLOR_MASK == PAWN && self.en_passant == mv.to {
+            match mv.piece & COLOR {
+                WHITE => {
+                    let ep_target = mv.to - 8;
+                    d_eval_mg += PAWN_VALUE_MG + PAWN_PST[ ep_target ];
+                    d_eval_eg += PAWN_VALUE_EG + PAWN_PST[ ep_target ];
+                },
+                BLACK => {
+                    let ep_target = mv.to + 8;
+                    d_eval_mg -= PAWN_VALUE_MG + PAWN_PST[ 63 - ep_target ];
+                    d_eval_eg -= PAWN_VALUE_EG + PAWN_PST[ 63 - ep_target ];
+                },
+                _ => panic!( "Invalid color: {}", mv.piece & COLOR ),
+            }
+        }
+
+        // Castling
+        match mv.castling() {
+            WK_CASTLE => {
+                d_eval_mg += ROOK_PST[ 58 ] - ROOK_PST[ 56 ];
+                d_eval_eg += ROOK_PST[ 58 ] - ROOK_PST[ 56 ];
+            },
+            WQ_CASTLE => {
+                d_eval_mg += ROOK_PST[ 60 ] - ROOK_PST[ 63 ];
+                d_eval_eg += ROOK_PST[ 60 ] - ROOK_PST[ 63 ];
+            },
+            BK_CASTLE => {
+                d_eval_mg -= ROOK_PST[ 61 ] - ROOK_PST[ 63 ];
+                d_eval_eg -= ROOK_PST[ 61 ] - ROOK_PST[ 63 ];
+            },
+            BQ_CASTLE => {
+                d_eval_mg -= ROOK_PST[ 59 ] - ROOK_PST[ 56 ];
+                d_eval_eg -= ROOK_PST[ 59 ] - ROOK_PST[ 56 ];
+            },
+            _ => {},
+        }
+
+        d_bishop_pair_bonus += ( has_opp_color_pair( bishop_bb_w ) - has_opp_color_pair( bishop_bb_b ) ) * BISHOP_PAIR_BONUS;
+        d_eval_mg += d_bishop_pair_bonus;
+        d_eval_eg += d_bishop_pair_bonus;
+
+        mv.pst_eval.npm = self.pst_eval.npm + d_npm;
+        mv.pst_eval.eval_mg = self.pst_eval.eval_mg + d_eval_mg;
+        mv.pst_eval.eval_eg = self.pst_eval.eval_eg + d_eval_eg;
+    }
+
+    // Asserts that Incrementally computed pst_eval is same as the one computed from scratch
+    // true = OK
+    pub fn check_pst_eval( &mut self ) -> bool {
+        let pst_eval = self.pst_eval;
+        self.set_pst_eval();
+        pst_eval == self.pst_eval
+    }
+
+    pub fn check_pst_eval_rec( &mut self, depth: usize ) -> bool {
+        assert!( depth > 0, "Depth has to be greater than zero!" );
+
+        let ( legal_moves, _ ) = self.node_info();
+
+        if depth == 1 {
+            self.check_pst_eval()
+        } else {
+            let mut ok: bool = true;
+            let irs = self.ir_state();
+
+            for mv in &legal_moves {
+                self.make( mv );
+                ok = ok && self.check_pst_eval_rec( depth - 1 );
+                self.unmake( mv, &irs );
+            }
+
+            ok
+        }
+    }
+
+    pub fn evaluate_move( &self, mv: &mut Move ) {
+        assert_eq!( self.to_move, mv.piece & COLOR );
+        mv.see = self.see( mv );
+        self.incremental_pst_eval( mv );
     }
 }

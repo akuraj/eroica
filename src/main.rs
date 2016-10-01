@@ -25,8 +25,26 @@ fn main() {
     let t1 = precise_time_ns();
 
     let mut state = State::new();
-    let pv = negamax( &mut state, 7, -MATE_VALUE, MATE_VALUE );
-    println!( "Eval: {}", pv.eval );
+    let mut stats = SearchStats::new();
+    let pv = negamax( &mut state, 8, -MATE_VALUE, MATE_VALUE, &mut stats );
+    println!( "Eval: {}\n", pv.eval );
+    println!( "{:?}\n", stats );
+
+    //let mut state = State::new();
+    //profile( &mut state, 6 );
+
+    /*
+    let fen = "r1bqr1k1/pp1n1ppp/3bp3/8/3pB3/2P2N2/PP3PPP/R1BQR1K1 w - - 0 12";
+    let mv_str = "Bxh7+";
+    let mut state = State::generate_state_from_fen( fen );
+    let mv = pgn_parser::parse_move( mv_str, &state ).unwrap();
+    let irs = state.ir_state();
+
+    for _ in 0..100000000 {
+        state.make( &mv );
+        state.unmake( &mv, &irs );
+    }
+    */
 
     // simple_game::play();
 

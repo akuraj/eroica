@@ -81,6 +81,21 @@ pub fn run_check_hash_rec( path: &str ) {
     }
 }
 
+pub fn run_check_pst_eval_rec( path: &str ) {
+    // Run check_hash_rec against test cases
+    let file = match File::open( path ) {
+        Ok( file ) => BufReader::new( file ),
+        Err( error ) => panic!( "Can't find {}: {:?}", path, error ),
+    };
+
+    for line in file.lines() {
+        let test = parse_peft_test_case( &line.unwrap() );
+        let mut state = State::generate_state_from_fen( &test.fen );
+        let max_depth = test.values.iter().fold( 0, |acc, x| if x.depth > acc { x.depth } else { acc } );
+        assert!( state.check_pst_eval_rec( max_depth ) );
+    }
+}
+
 pub fn perftsuite_bench() {
     let t1 = precise_time_ns();
     run_perft( "testing/perftsuite_bench.epd", true );
@@ -124,4 +139,10 @@ pub fn perftsuite_other() {
 #[ignore]
 pub fn test_check_hash_rec() {
     run_check_hash_rec( "testing/perftsuite_lean.epd" );
+}
+
+#[test]
+#[ignore]
+pub fn test_check_pst_eval_rec() {
+    run_check_pst_eval_rec( "testing/perftsuite_lean.epd" );
 }

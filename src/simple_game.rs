@@ -52,7 +52,8 @@ pub fn play() {
                 },
             }
         } else {
-            let pv = negamax( &mut state, search_depth, -MATE_VALUE, MATE_VALUE );
+            let mut stats = SearchStats::new();
+            let pv = negamax( &mut state, search_depth, -MATE_VALUE, MATE_VALUE, &mut stats );
             let mv = pv.move_list.get( 0 ).unwrap();
             state.make( mv );
             println!( "I just played: {}", mv );

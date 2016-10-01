@@ -43,7 +43,7 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
 
     match mv_str {
         "O-O" | "O-O-O" => {
-            let mv = match state.to_move {
+            let mut mv = match state.to_move {
                 WHITE => {
                     let mut mv_c = Move::null_move( WHITE_KING, 4 );
                     mv_c.to = if mv_str == "O-O" { 6 } else { 2 };
@@ -57,6 +57,7 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                 _ => panic!( "Invalid side to move!" ),
             };
 
+            state.evaluate_move( &mut mv );
             if legal_moves.contains( &mv ) {
                 Ok( mv )
             } else {
@@ -247,16 +248,22 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
 
                 let final_size = poss_filtered.iter().count();
                 if final_size == 1 {
-                    match poss_filtered.iter().nth( 0 ) {
-                        Some( poss_filtered_actual ) => Ok( *poss_filtered_actual ),
+                    match poss_filtered.iter_mut().nth( 0 ) {
+                        Some( poss_filtered_actual ) => {
+                            state.evaluate_move( poss_filtered_actual );
+                            Ok( *poss_filtered_actual )
+                        },
                         None => return Err( format!( "poss_filtered: poss_filtered[ 0 ] out of bounds!" ) ),
                     }
                 } else {
                     return Err( format!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut ) )
                 }
             } else if num_poss == 1 {
-                match possibilities.iter().nth( 0 ) {
-                    Some( possibilities_actual ) => Ok( *possibilities_actual ),
+                match possibilities.iter_mut().nth( 0 ) {
+                    Some( possibilities_actual ) => {
+                        state.evaluate_move( possibilities_actual );
+                        Ok( *possibilities_actual )
+                    },
                     None => return Err( format!( "possibilities: possibilities[ 0 ] out of bounds!" ) ),
                 }
             } else {
