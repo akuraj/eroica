@@ -2,6 +2,6 @@ language: rust
 rust:
   - nightly
 script:
-  - cargo build --verbose
-  - cargo test --verbose
-  - cargo test --verbose -- --ignored
+  - travis_wait cargo build --verbose
+  - travis_wait cargo test --verbose
+  - travis_wait cargo test --verbose -- --ignored
