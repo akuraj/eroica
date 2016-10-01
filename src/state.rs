@@ -1282,6 +1282,7 @@ impl State {
         self.history.iter().take( depth ).enumerate().filter( |x| x.0 % 2 == 1 && *x.1 == self.hash ).count()
     }
 
+    // This function returns legal Moves (sorted by PSTEval + SEE) and Game Status
     pub fn node_info( &self ) -> ( Vec<Move>, Status ) {
         let mut moves = self.moves();
 
@@ -1332,10 +1333,27 @@ impl State {
         }
     }
 
+    // Legal Moves, unsorted
+    pub fn legal_moves( &self ) -> Vec<Move> {
+        let mut moves = self.moves();
+
+        // Hmm, this is faster than both (by ~25%) -
+        // 1. legal_moves = moves.into_iter().filter( |x| self.is_legal( &x ) ).collect();
+        // 2. legal_moves = moves.iter().filter( |x| self.is_legal( x ) ).map( |x| *x ).collect();
+        let mut legal_moves: Vec<Move> = Vec::new();
+        for mv in moves.iter_mut() {
+            if self.is_legal( mv ) {
+                legal_moves.push( *mv );
+            }
+        }
+
+        legal_moves
+    }
+
     pub fn perft( &mut self, depth: usize, divide: bool ) -> u64 {
         assert!( depth > 0, "Depth has to be greater than zero!" );
 
-        let ( legal_moves, _ ) = self.node_info();
+        let legal_moves = self.legal_moves();
 
         if depth == 1 {
             legal_moves.len() as u64
@@ -1392,7 +1410,7 @@ impl State {
     pub fn check_hash_rec( &mut self, depth: usize ) -> bool {
         assert!( depth > 0, "Depth has to be greater than zero!" );
 
-        let ( legal_moves, _ ) = self.node_info();
+        let legal_moves = self.legal_moves();
 
         if depth == 1 {
             self.check_hash()
@@ -1431,7 +1449,7 @@ impl State {
         if let Some( nodes ) = hp.get( self.hash, depth ) {
             nodes
         } else {
-            let ( legal_moves, _ ) = self.node_info();
+            let legal_moves = self.legal_moves();
 
             if depth == 1 {
                 legal_moves.len() as u64
