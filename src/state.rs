@@ -198,7 +198,7 @@ impl PSTEval {
 }
 
 // Game status enum
-#[derive(Copy,Clone,Debug,PartialEq)]
+#[derive(Copy,Clone,Debug,PartialEq,Eq)]
 pub enum Status {
     /* Termination Trump: Checkmate > Stalemate > FiftyMoveDraw > RepetitionDraw > InsufficientMaterial */
 

@@ -1,7 +1,7 @@
 //! Utils needed for various purposes
 
 use consts::*;
-use std::u64::MAX;
+use std::u64;
 use std::cmp;
 
 // A simple fn to print a BitBoard
@@ -299,9 +299,9 @@ pub fn influence( pos: usize, size: usize ) -> u64 {
     let ( i, j ) = file_rank( pos );
 
     let influence_rank: u64 = match ( ( j + size ) < 7, j > size ) {
-        ( true, true ) => ( MAX >> ( 56 - 8 * ( j + size ) ) ) & ( MAX << ( 8 * ( j - size ) ) ),
-        ( true, false ) => MAX >> ( 56 - 8 * ( j + size ) ),
-        ( false, true ) => MAX << ( 8 * ( j - size ) ),
+        ( true, true ) => ( u64::MAX >> ( 56 - 8 * ( j + size ) ) ) & ( u64::MAX << ( 8 * ( j - size ) ) ),
+        ( true, false ) => u64::MAX >> ( 56 - 8 * ( j + size ) ),
+        ( false, true ) => u64::MAX << ( 8 * ( j - size ) ),
         ( false, false ) => panic!( "You're trying to influence too much - just stop!" ),
     };
 
@@ -428,9 +428,9 @@ pub fn line( pos1: usize, pos2: usize ) -> u64 {
 // Returns line segment joining pos1 and pos2
 pub fn line_segment( pos1: usize, pos2: usize ) -> u64 {
     line( pos1, pos2 ) & if pos1 > pos2 {
-        ( MAX >> ( 63 - pos1 ) ) & ( MAX << pos2 )
+        ( u64::MAX >> ( 63 - pos1 ) ) & ( u64::MAX << pos2 )
     } else {
-        ( MAX >> ( 63 - pos2 ) ) & ( MAX << pos1 )
+        ( u64::MAX >> ( 63 - pos2 ) ) & ( u64::MAX << pos1 )
     }
 }
 
