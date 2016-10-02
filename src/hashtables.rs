@@ -3,6 +3,7 @@
 use consts::*;
 use std::i32;
 use std::cmp::Ordering;
+use std::ops::Neg;
 
 #[derive(Copy,Clone,Debug,PartialEq,Eq)]
 pub struct HashPerftItem {
@@ -59,6 +60,18 @@ pub enum EvalType {
     Beta,
 }
 
+impl Neg for EvalType {
+    type Output = EvalType;
+
+    fn neg( self ) -> EvalType {
+        match self {
+            EvalType::Alpha => EvalType::Beta,
+            EvalType::Exact => EvalType::Exact,
+            EvalType::Beta => EvalType::Alpha,
+        }
+    }
+}
+
 // Evaluation Result
 #[derive(Copy,Clone,Debug,PartialEq,Eq)]
 pub struct Eval {
@@ -79,6 +92,15 @@ impl PartialOrd for Eval {
             ( EvalType::Beta, EvalType::Exact ) => if self.value < other.value { Some( Ordering::Less ) } else { None },
             ( EvalType::Beta, EvalType::Beta ) => None,
         }
+    }
+}
+
+impl Neg for Eval {
+    type Output = Eval;
+
+    fn neg( self ) -> Eval {
+        Eval { eval_type: -self.eval_type,
+               value: -self.value, }
     }
 }
 
