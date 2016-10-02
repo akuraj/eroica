@@ -9,7 +9,7 @@ use hash::*;
 use hashtables::*;
 use std::collections::VecDeque;
 use std::cmp;
-use std::cmp::{Ordering,};
+use std::cmp::Ordering;
 
 // A mailbox style board that encodes the contents of each square in u8
 pub type SimpleBoard = [ u8; 64 ];
