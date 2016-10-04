@@ -94,6 +94,8 @@ pub const ALL_BLACK_SQUARES: u64 = 0xAA55AA55AA55AA55u64;
 
 /* Values in centi-pawns */
 
+pub const INF_VALUE: i32 = 1 << 20;
+
 // Piece Values
 // FIXME: Currently, the piece values are borrowed from Stockfish. Will tune this at some point in the future.
 pub const PAWN_VALUE_MG: i32 = 80;
