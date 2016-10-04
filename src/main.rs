@@ -26,7 +26,7 @@ fn main() {
 
     let mut state = State::new();
     let mut stats = SearchStats::new();
-    let pv = negamax( &mut state, 8, -MATE_VALUE, MATE_VALUE, &mut stats );
+    let pv = negamax( &mut state, 8, -INF_VALUE, INF_VALUE, &mut stats );
     println!( "Eval: {}\n", pv.eval );
     println!( "{:?}\n", stats );
 
