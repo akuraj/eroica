@@ -63,12 +63,27 @@ pub struct Eval {
     pub value: i32,
 }
 
+impl Eval {
+    pub fn new() -> Self {
+        Eval { eval_type: EvalType::Alpha,
+               value: -INF_VALUE, }
+    }
+}
+
 // Transposition Table entry
 #[derive(Copy,Clone,Debug,PartialEq,Eq)]
 pub struct TTItem {
     pub hash: u64,
     pub depth: usize,
     pub eval: Eval,
+}
+
+impl TTItem {
+    pub fn new() -> Self {
+        TTItem { hash: 0,
+                 depth: ERR_POS,
+                 eval: Eval::new(), }
+    }
 }
 
 // TranspositionTable
@@ -81,11 +96,7 @@ pub struct TranspositionTable {
 impl TranspositionTable {
     pub fn new( num_bits: usize ) -> Self {
         let size: usize = 1 << num_bits;
-
-        let dummy_tt_item = TTItem { hash: 0,
-                                     depth: ERR_POS,
-                                     eval: Eval { eval_type: EvalType::Alpha,
-                                                  value: -INF_VALUE, }, };
+        let dummy_tt_item = TTItem::new();
 
         TranspositionTable { index_mask: size - 1,
                              table: vec![ dummy_tt_item; size ], }
