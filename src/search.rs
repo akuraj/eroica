@@ -36,6 +36,8 @@ pub struct SearchStats {
     pub middle_qs: u64,
     pub quiet_qs: u64,
     pub beta_cutoff_qs: u64,
+    pub hash_hit: u64,
+    pub hash_cutoff: u64,
 }
 
 impl SearchStats {
@@ -48,6 +50,8 @@ impl SearchStats {
             middle_qs: 0,
             quiet_qs: 0,
             beta_cutoff_qs: 0,
+            hash_hit: 0,
+            hash_cutoff: 0,
         }
     }
 }
@@ -110,7 +114,9 @@ pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stat
 
     if status == Status::Ongoing {
         if let Some( hashed ) = tt.get( state.hash, depth ) {
-            if hashed.eval_type == EvalType::Exact || beta <= hashed.value {
+            stats.hash_hit += 1;
+            if beta <= hashed.value || ( hashed.eval_type == EvalType::Exact && hashed.value <= alpha ) {
+                stats.hash_cutoff += 1;
                 return Variation::terminal( hashed.value );
             }
         }
