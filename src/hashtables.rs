@@ -96,10 +96,9 @@ pub struct TranspositionTable {
 impl TranspositionTable {
     pub fn new( num_bits: usize ) -> Self {
         let size: usize = 1 << num_bits;
-        let dummy_tt_item = TTItem::new();
 
         TranspositionTable { index_mask: size - 1,
-                             table: vec![ dummy_tt_item; size ], }
+                             table: vec![ TTItem::new(); size ], }
     }
 
     pub fn get( &self, hash: u64, depth: usize ) -> Option<Eval> {
