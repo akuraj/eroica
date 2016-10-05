@@ -5,6 +5,7 @@ use evaluation::*;
 use consts::*;
 use std::cmp;
 use std::collections::VecDeque;
+use hashtables::*;
 
 pub struct Variation {
     pub eval: i32,
@@ -91,7 +92,9 @@ pub fn quiescence( state: &mut State, mut alpha: i32, beta: i32, stats: &mut Sea
                 state.unmake( mv, &irs );
 
                 alpha = cmp::max( alpha, eval );
-                if beta <= alpha { break; } // Failing soft
+
+                // Failing soft
+                if beta <= alpha { break; }
             }
 
             eval
@@ -102,10 +105,16 @@ pub fn quiescence( state: &mut State, mut alpha: i32, beta: i32, stats: &mut Sea
     }
 }
 
-pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stats: &mut SearchStats ) -> Variation {
+pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stats: &mut SearchStats, tt: &mut TranspositionTable ) -> Variation {
     let ( legal_moves, status ) = state.node_info();
 
     if status == Status::Ongoing {
+        if let Some( hashed ) = tt.get( state.hash, depth ) {
+            if hashed.eval_type == EvalType::Exact || beta <= hashed.value {
+                return Variation::terminal( hashed.value );
+            }
+        }
+
         if depth == 0 {
             stats.max_depth += 1;
             Variation::terminal( quiescence( state, alpha, beta, stats ) )
@@ -113,15 +122,23 @@ pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stat
             stats.middle += 1;
             let irs = state.ir_state();
             let mut var = Variation::terminal( -MATE_VALUE );
+            let mut eval_type: EvalType = EvalType::Exact;
 
             for mv in &legal_moves {
                 state.make( mv );
-                var.max_assign( mv, negamax( state, depth - 1, -beta, -alpha, stats ) );
+                var.max_assign( mv, negamax( state, depth - 1, -beta, -alpha, stats, tt ) );
                 state.unmake( mv, &irs );
 
                 alpha = cmp::max( alpha, var.eval );
-                if beta <= alpha { break; } // Failing soft
+
+                // Failing soft
+                if beta <= alpha {
+                    eval_type = EvalType::Alpha;
+                    break;
+                }
             }
+
+            tt.set( state.hash, depth, Eval { eval_type: eval_type, value: var.eval } );
 
             var
         }

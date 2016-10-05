@@ -5,6 +5,7 @@ use state::*;
 use search::*;
 use consts::*;
 use pgn_parser::*;
+use hashtables::*;
 
 pub fn user_input< 'a >( buffer: &'a mut String, stdin: &'a mut io::Stdin ) -> &'a str {
     buffer.clear();
@@ -36,6 +37,7 @@ pub fn play() {
 
     let search_depth: usize = 4;
     let mut state = State::new();
+    let mut tt = TranspositionTable::new( 24 );
 
     loop {
         if state.to_move == opponent_color {
@@ -53,7 +55,7 @@ pub fn play() {
             }
         } else {
             let mut stats = SearchStats::new();
-            let pv = negamax( &mut state, search_depth, -MATE_VALUE, MATE_VALUE, &mut stats );
+            let pv = negamax( &mut state, search_depth, -MATE_VALUE, MATE_VALUE, &mut stats, &mut tt );
             let mv = pv.move_list.get( 0 ).unwrap();
             state.make( mv );
             println!( "I just played: {}", mv );

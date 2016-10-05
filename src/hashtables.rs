@@ -1,9 +1,6 @@
 //! Implement required hash tables here
 
 use consts::*;
-use std::i32;
-use std::cmp::Ordering;
-use std::ops::Neg;
 
 #[derive(Copy,Clone,Debug,PartialEq,Eq)]
 pub struct HashPerftItem {
@@ -57,19 +54,6 @@ impl HashPerft {
 pub enum EvalType {
     Alpha,
     Exact,
-    Beta,
-}
-
-impl Neg for EvalType {
-    type Output = EvalType;
-
-    fn neg( self ) -> EvalType {
-        match self {
-            EvalType::Alpha => EvalType::Beta,
-            EvalType::Exact => EvalType::Exact,
-            EvalType::Beta => EvalType::Alpha,
-        }
-    }
 }
 
 // Evaluation Result
@@ -77,31 +61,6 @@ impl Neg for EvalType {
 pub struct Eval {
     pub eval_type: EvalType,
     pub value: i32,
-}
-
-impl PartialOrd for Eval {
-    fn partial_cmp( &self, other: &Eval ) -> Option<Ordering> {
-        match ( self.eval_type, other.eval_type ) {
-            ( EvalType::Alpha, EvalType::Alpha ) => None,
-            ( EvalType::Alpha, EvalType::Exact ) => if self.value > other.value { Some( Ordering::Greater ) } else { None },
-            ( EvalType::Alpha, EvalType::Beta ) => if self.value > other.value { Some( Ordering::Greater ) } else { None },
-            ( EvalType::Exact, EvalType::Alpha ) => if self.value < other.value { Some( Ordering::Less ) } else { None },
-            ( EvalType::Exact, EvalType::Exact ) => Some( self.value.cmp( &other.value ) ),
-            ( EvalType::Exact, EvalType::Beta ) => if self.value > other.value { Some( Ordering::Greater ) } else { None },
-            ( EvalType::Beta, EvalType::Alpha ) => if self.value < other.value { Some( Ordering::Less ) } else { None },
-            ( EvalType::Beta, EvalType::Exact ) => if self.value < other.value { Some( Ordering::Less ) } else { None },
-            ( EvalType::Beta, EvalType::Beta ) => None,
-        }
-    }
-}
-
-impl Neg for Eval {
-    type Output = Eval;
-
-    fn neg( self ) -> Eval {
-        Eval { eval_type: -self.eval_type,
-               value: -self.value, }
-    }
 }
 
 // Transposition Table entry
@@ -126,7 +85,7 @@ impl TranspositionTable {
         let dummy_tt_item = TTItem { hash: 0,
                                      depth: ERR_POS,
                                      eval: Eval { eval_type: EvalType::Alpha,
-                                                  value: i32::MIN, }, };
+                                                  value: -INF_VALUE, }, };
 
         TranspositionTable { index_mask: size - 1,
                              table: vec![ dummy_tt_item; size ], }
@@ -145,7 +104,7 @@ impl TranspositionTable {
     pub fn set( &mut self, hash: u64, depth: usize, eval: Eval ) {
         let item: &mut TTItem = &mut self.table[ hash as usize & self.index_mask ];
 
-        if item.depth == ERR_POS || item.depth < depth {
+        if item.depth == ERR_POS || item.depth <= depth {
             item.hash = hash;
             item.depth = depth;
             item.eval = eval;

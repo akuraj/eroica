@@ -20,13 +20,15 @@ use time::*;
 use state::*;
 use consts::*;
 use search::*;
+use hashtables::*;
 
 fn main() {
     let t1 = precise_time_ns();
 
     let mut state = State::new();
     let mut stats = SearchStats::new();
-    let pv = negamax( &mut state, 8, -INF_VALUE, INF_VALUE, &mut stats );
+    let mut tt = TranspositionTable::new( 24 );
+    let pv = negamax( &mut state, 9, -INF_VALUE, INF_VALUE, &mut stats, &mut tt );
     println!( "Eval: {}\n", pv.eval );
     println!( "{:?}\n", stats );
 
