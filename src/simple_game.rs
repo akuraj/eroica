@@ -43,6 +43,7 @@ pub fn play() {
         if state.to_move == opponent_color {
             println!( "{}\nYour move:\n", state );
             let input = user_input( buffer, stdin );
+            if input.contains( "exit" ) { break; }
             match parse_move( input, &state ) {
                 Ok( mv ) => {
                     println!( "Parsed: {}\n\n", mv );
