@@ -127,7 +127,7 @@ pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stat
         } else {
             stats.middle += 1;
             let irs = state.ir_state();
-            let mut var = Variation::terminal( -MATE_VALUE );
+            let mut var = Variation::terminal( -INF_VALUE );
             let mut eval_type: EvalType = EvalType::Exact;
 
             for mv in &legal_moves {
