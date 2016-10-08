@@ -114,10 +114,8 @@ impl TranspositionTable {
     pub fn set( &mut self, hash: u64, depth: usize, eval: Eval ) {
         let item: &mut TTItem = &mut self.table[ hash as usize & self.index_mask ];
 
-        if item.depth == ERR_POS || item.depth <= depth {
-            item.hash = hash;
-            item.depth = depth;
-            item.eval = eval;
-        }
+        item.hash = hash;
+        item.depth = depth;
+        item.eval = eval;
     }
 }
