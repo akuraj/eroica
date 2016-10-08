@@ -1556,7 +1556,6 @@ impl State {
         let from = mv.from;
         let to = mv.to;
         let mut occupancy: u64 = ( self.bit_board[ WHITE_ALL ] | self.bit_board[ BLACK_ALL ] ) ^ ( 1 << from );
-        let mut swap_list: [ i32; 32 ] = [ 0; 32 ];
 
         // en_passant
         if self.en_passant == mv.to && mv.piece & COLOR_MASK == PAWN { occupancy ^= self.ep_target_bb(); }
@@ -1565,7 +1564,10 @@ impl State {
         let mut attackers = self.attackers( to, occupancy ) & occupancy;
         to_move ^= COLOR;
         let mut stm_attackers = attackers & self.bit_board[ to_move | ALL ];
-        if stm_attackers == 0 { return swap_list[ 0 ]; }
+        if stm_attackers == 0 { return 0; }
+
+        // swap_list; swap_list[ 0 ] is going to remain zero (read function description)
+        let mut swap_list: [ i32; 32 ] = [ 0; 32 ];
 
         // Update next_victim if we have a promotion
         let mut next_victim = if mv.promotion == EMPTY { mv.piece & COLOR_MASK } else { mv.promotion & COLOR_MASK };
