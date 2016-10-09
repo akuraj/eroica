@@ -124,7 +124,6 @@ pub fn perftsuite_no_hash() {
 }
 
 #[test]
-#[ignore]
 pub fn perftsuite() {
     run_perft( "testing/perftsuite.epd", true );
 }
@@ -136,13 +135,11 @@ pub fn perftsuite_other() {
 }
 
 #[test]
-#[ignore]
 pub fn test_check_hash_rec() {
     run_check_hash_rec( "testing/perftsuite_lean.epd" );
 }
 
 #[test]
-#[ignore]
 pub fn test_check_pst_eval_rec() {
     run_check_pst_eval_rec( "testing/perftsuite_lean.epd" );
 }
