@@ -1905,4 +1905,28 @@ impl State {
         mv.see = self.see( mv );
         self.incremental_pst_eval( mv );
     }
+
+    pub fn check_is_legal_strict_rec( &mut self, depth: usize ) -> bool {
+        assert!( depth > 0, "Depth has to be greater than zero!" );
+
+        let legal_moves = self.legal_moves();
+        let mut ok: bool = true;
+
+        if depth == 1 {
+            for mv in &legal_moves {
+                ok = ok && self.is_legal_strict( mv );
+            }
+        } else {
+            let irs = self.ir_state();
+            
+            for mv in &legal_moves {
+                ok = ok && self.is_legal_strict( mv );
+                self.make( mv );
+                ok = ok && self.check_is_legal_strict_rec( depth - 1 );
+                self.unmake( mv, &irs );
+            }
+        }
+
+        ok
+    }
 }
