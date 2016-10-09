@@ -1256,7 +1256,7 @@ impl State {
         }
     }
 
-    // Works for pseudo-legal moves generated for the position in question. Can't use it for any random move.
+    // For pseudo-legal moves
     pub fn is_legal( &self, mv: &Move ) -> bool {
         let castling_path = mv.castling_path(); // zero if not castling
         if castling_path != 0 {
@@ -1275,6 +1275,33 @@ impl State {
                 }
             }
         }
+    }
+
+    // All possible pseudo-legal moves for piece at pos
+    pub fn moves_bb( &self, pos: usize ) -> u64 {
+        let side = self.to_move;
+        let piece = self.simple_board[ pos ];
+        if piece == EMPTY || piece & COLOR != side { return 0; }
+
+        let not_friendly = !self.bit_board[ side | ALL ];
+        let occupancy = self.bit_board[ side | ALL ] | self.bit_board[ ( side ^ COLOR ) | ALL ];
+
+        not_friendly & ( match piece & COLOR_MASK {
+            PAWN => self.mg.p_moves( pos, side, occupancy | self.ep_bb() ),
+            KNIGHT => self.mg.n_moves( pos ),
+            BISHOP => self.mg.b_moves( pos, occupancy ),
+            ROOK => self.mg.r_moves( pos, occupancy ),
+            QUEEN => self.mg.q_moves( pos, occupancy ),
+            KING => self.mg.k_moves( pos, side, occupancy, self.castling ),
+            _ => panic!( "Invalid piece: {}", piece ),
+        } )
+    }
+
+    // For any move
+    pub fn is_legal_strict( &self, mv: &Move ) -> bool {
+        if self.simple_board[ mv.from ] != mv.piece || self.simple_board[ mv.to ] != mv.capture { return false; }
+        if self.moves_bb( mv.from ) & ( 1 << mv.to ) == 0 { return false; }
+        self.is_legal( mv )
     }
 
     #[inline]
@@ -1480,7 +1507,7 @@ impl State {
 
     pub fn make_moves( &mut self, mvs: &[ Move ] ) {
         for mv in mvs {
-            if self.is_legal( mv ) {
+            if self.is_legal_strict( mv ) {
                 self.make( mv );
             } else {
                 panic!( "Illegal move: {:?}", mv );
