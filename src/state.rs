@@ -1625,7 +1625,6 @@ impl State {
 
     // Calculate PSTEval from scratch and set
     pub fn set_pst_eval( &mut self ) {
-        // FIXME: Find a better way to do this.
         let pawn_pst: &[ i32 ] = &PAWN_PST;
         let knight_pst: &[ i32 ] = &KNIGHT_PST;
         let bishop_pst: &[ i32 ] = &BISHOP_PST;
@@ -1703,7 +1702,6 @@ impl State {
     }
 
     pub fn incremental_pst_eval( &self, mv: &mut Move ) {
-        // FIXME: Find a better way to do this.
         let pawn_pst: &[ i32 ] = &PAWN_PST;
         let knight_pst: &[ i32 ] = &KNIGHT_PST;
         let bishop_pst: &[ i32 ] = &BISHOP_PST;
@@ -1918,7 +1916,7 @@ impl State {
             }
         } else {
             let irs = self.ir_state();
-            
+
             for mv in &legal_moves {
                 ok = ok && self.is_legal_strict( mv );
                 self.make( mv );
