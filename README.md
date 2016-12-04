@@ -1,5 +1,5 @@
 # eroica [![Build Status](https://travis-ci.org/akuraj/eroica.svg?branch=master)](https://travis-ci.org/akuraj/eroica)
-Chess Engine written in Rust. Long way to go. My goal is to write a stong chess program as a learning experience.
+Chess Engine written in Rust. My goal is to write a strong Chess Engine as a learning experience.
 
 # Current
 * Magic Bitboard based move generator
@@ -18,6 +18,6 @@ Chess Engine written in Rust. Long way to go. My goal is to write a stong chess 
 * Late Move Pruning, Late Move Reductions, Null Move Reductions etc.
 * Transposition Table cleanup scheme
 
-I try to work on this whenever I get a decent amount of free time (not often these days).
+I try to work on this whenever I get a decent amount of free time (which is not often these days).
 
 Jayakiran
