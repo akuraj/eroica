@@ -1,5 +1,5 @@
 # eroica [![Build Status](https://travis-ci.org/akuraj/eroica.svg?branch=master)](https://travis-ci.org/akuraj/eroica)
-Chess Engine written in Rust. My goal is to write a strong Chess Engine as a learning experience.
+Chess Engine written in Rust. My goal is to write a strong Chess Engine as a learning experience. Yes - it can play decent Chess already, but can't play a whole game yet.
 
 # Current
 * Magic Bitboard based move generator
@@ -8,7 +8,6 @@ Chess Engine written in Rust. My goal is to write a strong Chess Engine as a lea
 * Ad-Hoc communication protocol implemented for testing
 * Move ordering by SEE (Static Exchange Evaluation)
 * Basic Quiescence Search
-* Yes - it can play chess (not a whole game, yet)!
 
 # Next
 * Implement a standard chess protocol: CECP or UCI
