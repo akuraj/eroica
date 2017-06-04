@@ -89,6 +89,7 @@ pub const ALL_WHITE_SQUARES: u64 = 0x55AA55AA55AA55AAu64;
 pub const ALL_BLACK_SQUARES: u64 = 0xAA55AA55AA55AA55u64;
 
 // Position Constants
+pub const MAX_POS: usize = 63;
 pub const WK_START: usize = 4;
 pub const WK_KS_CASTLE: usize = WK_START + 2;
 pub const WK_QS_CASTLE: usize = WK_START - 2;

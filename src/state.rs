@@ -438,26 +438,26 @@ impl State {
 
         // castling
         if self.castling & W_CASTLE != 0 {
-            assert_eq!( self.simple_board[ 4 ], WHITE_KING );
+            assert_eq!( self.simple_board[ WK_START ], WHITE_KING );
 
             if self.castling & WK_CASTLE != 0 {
-                assert_eq!( self.simple_board[ 7 ], WHITE_ROOK );
+                assert_eq!( self.simple_board[ WKR_START ], WHITE_ROOK );
             }
 
             if self.castling & WQ_CASTLE != 0 {
-                assert_eq!( self.simple_board[ 0 ], WHITE_ROOK );
+                assert_eq!( self.simple_board[ WQR_START ], WHITE_ROOK );
             }
         }
 
         if self.castling & B_CASTLE != 0 {
-            assert_eq!( self.simple_board[ 60 ], BLACK_KING );
+            assert_eq!( self.simple_board[ BK_START ], BLACK_KING );
 
             if self.castling & BK_CASTLE != 0 {
-                assert_eq!( self.simple_board[ 63 ], BLACK_ROOK );
+                assert_eq!( self.simple_board[ BKR_START ], BLACK_ROOK );
             }
 
             if self.castling & BQ_CASTLE != 0 {
-                assert_eq!( self.simple_board[ 56 ], BLACK_ROOK );
+                assert_eq!( self.simple_board[ BQR_START ], BLACK_ROOK );
             }
         }
 
@@ -1644,8 +1644,8 @@ impl State {
                     while bb != 0 {
                         if piece_type != PAWN { npm += piece_val_mg; }
                         pos = pop_lsb_pos( &mut bb );
-                        eval_mg += piece_val_mg + pst[ 63 - pos ];
-                        eval_eg += piece_val_eg + pst[ 63 - pos ];
+                        eval_mg += piece_val_mg + pst[ MAX_POS - pos ];
+                        eval_eg += piece_val_eg + pst[ MAX_POS - pos ];
                     }
                 },
                 BLACK => {
@@ -1668,8 +1668,8 @@ impl State {
         // Kings
         bb = self.bit_board[ WHITE_KING ];
         pos = pop_lsb_pos( &mut bb );
-        eval_mg += KING_MG_PST[ 63 - pos ];
-        eval_eg += KING_EG_PST[ 63 - pos ];
+        eval_mg += KING_MG_PST[ MAX_POS - pos ];
+        eval_eg += KING_EG_PST[ MAX_POS - pos ];
 
         bb = self.bit_board[ BLACK_KING ];
         pos = pop_lsb_pos( &mut bb );
@@ -1704,8 +1704,8 @@ impl State {
         // Mover
         match mv.piece {
             WHITE_KING => {
-                d_eval_mg += KING_MG_PST[ 63 - mv.to ] - KING_MG_PST[ 63 - mv.from ];
-                d_eval_eg += KING_EG_PST[ 63 - mv.to ] - KING_EG_PST[ 63 - mv.from ];
+                d_eval_mg += KING_MG_PST[ MAX_POS - mv.to ] - KING_MG_PST[ MAX_POS - mv.from ];
+                d_eval_eg += KING_EG_PST[ MAX_POS - mv.to ] - KING_EG_PST[ MAX_POS - mv.from ];
             },
             BLACK_KING => {
                 d_eval_mg -= KING_MG_PST[ mv.to ] - KING_MG_PST[ mv.from ];
@@ -1723,8 +1723,8 @@ impl State {
 
                 match mv.piece & COLOR {
                     WHITE => {
-                        d_eval_mg += pst[ 63 - mv.to ] - pst[ 63 - mv.from ];
-                        d_eval_eg += pst[ 63 - mv.to ] - pst[ 63 - mv.from ];
+                        d_eval_mg += pst[ MAX_POS - mv.to ] - pst[ MAX_POS - mv.from ];
+                        d_eval_eg += pst[ MAX_POS - mv.to ] - pst[ MAX_POS - mv.from ];
                     },
                     BLACK => {
                         d_eval_mg -= pst[ mv.to ] - pst[ mv.from ];
@@ -1751,8 +1751,8 @@ impl State {
 
             match mv.capture & COLOR {
                 WHITE => {
-                    d_eval_mg -= piece_val_mg + pst[ 63 - mv.to ];
-                    d_eval_eg -= piece_val_eg + pst[ 63 - mv.to ];
+                    d_eval_mg -= piece_val_mg + pst[ MAX_POS - mv.to ];
+                    d_eval_eg -= piece_val_eg + pst[ MAX_POS - mv.to ];
                 },
                 BLACK => {
                     d_eval_mg += piece_val_mg + pst[ mv.to ];
@@ -1770,8 +1770,8 @@ impl State {
         if mv.is_promotion() {
             match mv.piece & COLOR {
                 WHITE => {
-                    d_eval_mg -= PAWN_VALUE_MG + PAWN_PST[ 63 - mv.to ];
-                    d_eval_eg -= PAWN_VALUE_EG + PAWN_PST[ 63 - mv.to ];
+                    d_eval_mg -= PAWN_VALUE_MG + PAWN_PST[ MAX_POS - mv.to ];
+                    d_eval_eg -= PAWN_VALUE_EG + PAWN_PST[ MAX_POS - mv.to ];
                 },
                 BLACK => {
                     d_eval_mg += PAWN_VALUE_MG + PAWN_PST[ mv.to ];
@@ -1794,8 +1794,8 @@ impl State {
 
             match mv.promotion & COLOR {
                 WHITE => {
-                    d_eval_mg += piece_val_mg + pst[ 63 - mv.to ];
-                    d_eval_eg += piece_val_eg + pst[ 63 - mv.to ];
+                    d_eval_mg += piece_val_mg + pst[ MAX_POS - mv.to ];
+                    d_eval_eg += piece_val_eg + pst[ MAX_POS - mv.to ];
                 },
                 BLACK => {
                     d_eval_mg -= piece_val_mg + pst[ mv.to ];
@@ -1817,8 +1817,8 @@ impl State {
                 },
                 BLACK => {
                     let ep_target = mv.to + 8;
-                    d_eval_mg -= PAWN_VALUE_MG + PAWN_PST[ 63 - ep_target ];
-                    d_eval_eg -= PAWN_VALUE_EG + PAWN_PST[ 63 - ep_target ];
+                    d_eval_mg -= PAWN_VALUE_MG + PAWN_PST[ MAX_POS - ep_target ];
+                    d_eval_eg -= PAWN_VALUE_EG + PAWN_PST[ MAX_POS - ep_target ];
                 },
                 _ => panic!( "Invalid color: {}", mv.piece & COLOR ),
             }
@@ -1827,20 +1827,20 @@ impl State {
         // Castling
         match mv.castling_info().0 {
             WK_CASTLE => {
-                d_eval_mg += ROOK_PST[ 58 ] - ROOK_PST[ 56 ];
-                d_eval_eg += ROOK_PST[ 58 ] - ROOK_PST[ 56 ];
+                d_eval_mg += ROOK_PST[ MAX_POS - WKR_CASTLE ] - ROOK_PST[ MAX_POS - WKR_START ];
+                d_eval_eg += ROOK_PST[ MAX_POS - WKR_CASTLE ] - ROOK_PST[ MAX_POS - WKR_START ];
             },
             WQ_CASTLE => {
-                d_eval_mg += ROOK_PST[ 60 ] - ROOK_PST[ 63 ];
-                d_eval_eg += ROOK_PST[ 60 ] - ROOK_PST[ 63 ];
+                d_eval_mg += ROOK_PST[ MAX_POS - WQR_CASTLE ] - ROOK_PST[ MAX_POS - WQR_START ];
+                d_eval_eg += ROOK_PST[ MAX_POS - WQR_CASTLE ] - ROOK_PST[ MAX_POS - WQR_START ];
             },
             BK_CASTLE => {
-                d_eval_mg -= ROOK_PST[ 61 ] - ROOK_PST[ 63 ];
-                d_eval_eg -= ROOK_PST[ 61 ] - ROOK_PST[ 63 ];
+                d_eval_mg -= ROOK_PST[ BKR_CASTLE ] - ROOK_PST[ BKR_START ];
+                d_eval_eg -= ROOK_PST[ BKR_CASTLE ] - ROOK_PST[ BKR_START ];
             },
             BQ_CASTLE => {
-                d_eval_mg -= ROOK_PST[ 59 ] - ROOK_PST[ 56 ];
-                d_eval_eg -= ROOK_PST[ 59 ] - ROOK_PST[ 56 ];
+                d_eval_mg -= ROOK_PST[ BQR_CASTLE ] - ROOK_PST[ BQR_START ];
+                d_eval_eg -= ROOK_PST[ BQR_CASTLE ] - ROOK_PST[ BQR_START ];
             },
             _ => {},
         }
