@@ -770,13 +770,13 @@ impl State {
             WHITE_KING => {
                 match mv.castling_info().0 {
                     WK_CASTLE => {
-                        self.simple_board[ 7 ] = WHITE_ROOK;
-                        self.simple_board[ 5 ] = EMPTY;
+                        self.simple_board[ WKR_START ] = WHITE_ROOK;
+                        self.simple_board[ WKR_CASTLE ] = EMPTY;
                         self.bit_board[ WHITE_ROOK ] ^= ROOK_WKC;
                     },
                     WQ_CASTLE => {
-                        self.simple_board[ 0 ] = WHITE_ROOK;
-                        self.simple_board[ 3 ] = EMPTY;
+                        self.simple_board[ WQR_START ] = WHITE_ROOK;
+                        self.simple_board[ WQR_CASTLE ] = EMPTY;
                         self.bit_board[ WHITE_ROOK ] ^= ROOK_WQC;
                     },
                     _ => {},
@@ -794,13 +794,13 @@ impl State {
             BLACK_KING => {
                 match mv.castling_info().0 {
                     BK_CASTLE => {
-                        self.simple_board[ 63 ] = BLACK_ROOK;
-                        self.simple_board[ 61 ] = EMPTY;
+                        self.simple_board[ BKR_START ] = BLACK_ROOK;
+                        self.simple_board[ BKR_CASTLE ] = EMPTY;
                         self.bit_board[ BLACK_ROOK ] ^= ROOK_BKC;
                     },
                     BQ_CASTLE => {
-                        self.simple_board[ 56 ] = BLACK_ROOK;
-                        self.simple_board[ 59 ] = EMPTY;
+                        self.simple_board[ BQR_START ] = BLACK_ROOK;
+                        self.simple_board[ BQR_CASTLE ] = EMPTY;
                         self.bit_board[ BLACK_ROOK ] ^= ROOK_BQC;
                     },
                     _ => {},
