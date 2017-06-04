@@ -90,11 +90,19 @@ pub const ALL_BLACK_SQUARES: u64 = 0xAA55AA55AA55AA55u64;
 
 // Position Constants
 pub const WK_START: usize = 4;
-pub const WK_KS_CASTLE: usize = 6;
-pub const WK_QS_CASTLE: usize = 2;
+pub const WK_KS_CASTLE: usize = WK_START + 2;
+pub const WK_QS_CASTLE: usize = WK_START - 2;
 pub const BK_START: usize = 60;
-pub const BK_KS_CASTLE: usize = 62;
-pub const BK_QS_CASTLE: usize = 58;
+pub const BK_KS_CASTLE: usize = BK_START + 2;
+pub const BK_QS_CASTLE: usize = BK_START - 2;
+pub const WKR_START: usize = WK_KS_CASTLE + 1;
+pub const WKR_CASTLE: usize = WK_KS_CASTLE - 1;
+pub const WQR_START: usize = WK_QS_CASTLE - 2;
+pub const WQR_CASTLE: usize = WK_QS_CASTLE + 1;
+pub const BKR_START: usize = BK_KS_CASTLE + 1;
+pub const BKR_CASTLE: usize = BK_KS_CASTLE - 1;
+pub const BQR_START: usize = BK_QS_CASTLE - 2;
+pub const BQR_CASTLE: usize = BK_QS_CASTLE + 1;
 
 /*****************************
 **** Evaluation Constants ****

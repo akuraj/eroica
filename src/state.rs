@@ -630,18 +630,18 @@ impl State {
             WHITE_KING => {
                 match mv.castling_info().0 {
                     WK_CASTLE => {
-                        self.simple_board[ 7 ] = EMPTY;
-                        self.simple_board[ 5 ] = WHITE_ROOK;
+                        self.simple_board[ WKR_START ] = EMPTY;
+                        self.simple_board[ WKR_CASTLE ] = WHITE_ROOK;
                         self.bit_board[ WHITE_ROOK ] ^= ROOK_WKC;
-                        self.hash ^= self.hg.piece( WHITE_ROOK, 7 ); // HASH_UPDATE
-                        self.hash ^= self.hg.piece( WHITE_ROOK, 5 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( WHITE_ROOK, WKR_START ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( WHITE_ROOK, WKR_CASTLE ); // HASH_UPDATE
                     },
                     WQ_CASTLE => {
-                        self.simple_board[ 0 ] = EMPTY;
-                        self.simple_board[ 3 ] = WHITE_ROOK;
+                        self.simple_board[ WQR_START ] = EMPTY;
+                        self.simple_board[ WQR_CASTLE ] = WHITE_ROOK;
                         self.bit_board[ WHITE_ROOK ] ^= ROOK_WQC;
-                        self.hash ^= self.hg.piece( WHITE_ROOK, 0 ); // HASH_UPDATE
-                        self.hash ^= self.hg.piece( WHITE_ROOK, 3 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( WHITE_ROOK, WQR_START ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( WHITE_ROOK, WQR_CASTLE ); // HASH_UPDATE
                     },
                     _ => {},
                 };
@@ -650,8 +650,8 @@ impl State {
             },
             WHITE_ROOK => {
                 match mv.from {
-                    0 => self.castling &= !WQ_CASTLE,
-                    7 => self.castling &= !WK_CASTLE,
+                    WQR_START => self.castling &= !WQ_CASTLE,
+                    WKR_START => self.castling &= !WK_CASTLE,
                     _ => {},
                 }
             },
@@ -679,18 +679,18 @@ impl State {
             BLACK_KING => {
                 match mv.castling_info().0 {
                     BK_CASTLE => {
-                        self.simple_board[ 63 ] = EMPTY;
-                        self.simple_board[ 61 ] = BLACK_ROOK;
+                        self.simple_board[ BKR_START ] = EMPTY;
+                        self.simple_board[ BKR_CASTLE ] = BLACK_ROOK;
                         self.bit_board[ BLACK_ROOK ] ^= ROOK_BKC;
-                        self.hash ^= self.hg.piece( BLACK_ROOK, 63 ); // HASH_UPDATE
-                        self.hash ^= self.hg.piece( BLACK_ROOK, 61 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( BLACK_ROOK, BKR_START ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( BLACK_ROOK, BKR_CASTLE ); // HASH_UPDATE
                     },
                     BQ_CASTLE => {
-                        self.simple_board[ 56 ] = EMPTY;
-                        self.simple_board[ 59 ] = BLACK_ROOK;
+                        self.simple_board[ BQR_START ] = EMPTY;
+                        self.simple_board[ BQR_CASTLE ] = BLACK_ROOK;
                         self.bit_board[ BLACK_ROOK ] ^= ROOK_BQC;
-                        self.hash ^= self.hg.piece( BLACK_ROOK, 56 ); // HASH_UPDATE
-                        self.hash ^= self.hg.piece( BLACK_ROOK, 59 ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( BLACK_ROOK, BQR_START ); // HASH_UPDATE
+                        self.hash ^= self.hg.piece( BLACK_ROOK, BQR_CASTLE ); // HASH_UPDATE
                     },
                     _ => {},
                 };
@@ -699,8 +699,8 @@ impl State {
             },
             BLACK_ROOK => {
                 match mv.from {
-                    56 => self.castling &= !BQ_CASTLE,
-                    63 => self.castling &= !BK_CASTLE,
+                    BQR_START => self.castling &= !BQ_CASTLE,
+                    BKR_START => self.castling &= !BK_CASTLE,
                     _ => {},
                 }
             },
@@ -711,15 +711,15 @@ impl State {
         match mv.capture {
             WHITE_ROOK => {
                 match mv.to {
-                    0 => self.castling &= !WQ_CASTLE,
-                    7 => self.castling &= !WK_CASTLE,
+                    WQR_START => self.castling &= !WQ_CASTLE,
+                    WKR_START => self.castling &= !WK_CASTLE,
                     _ => {},
                 }
             },
             BLACK_ROOK => {
                 match mv.to {
-                    56 => self.castling &= !BQ_CASTLE,
-                    63 => self.castling &= !BK_CASTLE,
+                    BQR_START => self.castling &= !BQ_CASTLE,
+                    BKR_START => self.castling &= !BK_CASTLE,
                     _ => {},
                 }
             },
