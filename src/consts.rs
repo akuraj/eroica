@@ -88,6 +88,14 @@ pub const BQCR_OCC: u64 = WQCR_OCC << 56;
 pub const ALL_WHITE_SQUARES: u64 = 0x55AA55AA55AA55AAu64;
 pub const ALL_BLACK_SQUARES: u64 = 0xAA55AA55AA55AA55u64;
 
+// Position Constants
+pub const WK_START: usize = 4;
+pub const WK_KS_CASTLE: usize = 6;
+pub const WK_QS_CASTLE: usize = 2;
+pub const BK_START: usize = 60;
+pub const BK_KS_CASTLE: usize = 62;
+pub const BK_QS_CASTLE: usize = 58;
+
 /*****************************
 **** Evaluation Constants ****
 *****************************/

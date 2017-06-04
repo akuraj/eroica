@@ -68,35 +68,20 @@ pub struct Move {
 }
 
 impl Move {
-    pub fn castling( &self ) -> u8 {
+    // Returns ( castling_identifier, castling_path )
+    pub fn castling_info( &self ) -> ( u8, u64 ) {
         match ( self.piece, self.from ) {
-            ( WHITE_KING, 4 ) => match self.to {
-                2 => WQ_CASTLE,
-                6 => WK_CASTLE,
-                _ => 0,
+            ( WHITE_KING, WK_START ) => match self.to {
+                WK_QS_CASTLE => ( WQ_CASTLE, WQCR ),
+                WK_KS_CASTLE => ( WK_CASTLE, WKCR ),
+                _ => ( 0, 0 ),
             },
-            ( BLACK_KING, 60 ) => match self.to {
-                58 => BQ_CASTLE,
-                62 => BK_CASTLE,
-                _ => 0,
+            ( BLACK_KING, BK_START ) => match self.to {
+                BK_QS_CASTLE => ( BQ_CASTLE, BQCR ),
+                BK_KS_CASTLE => ( BK_CASTLE, BKCR ),
+                _ => ( 0, 0 ),
             },
-            _ => 0,
-        }
-    }
-
-    pub fn castling_path( &self ) -> u64 {
-        match ( self.piece, self.from ) {
-            ( WHITE_KING, 4 ) => match self.to {
-                2 => WQCR,
-                6 => WKCR,
-                _ => 0,
-            },
-            ( BLACK_KING, 60 ) => match self.to {
-                58 => BQCR,
-                62 => BKCR,
-                _ => 0,
-            },
-            _ => 0,
+            _ => ( 0, 0 ),
         }
     }
 
@@ -144,7 +129,7 @@ impl PartialOrd for Move {
 impl fmt::Display for Move {
     fn fmt( &self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = String::new();
-        let castling = self.castling();
+        let castling = self.castling_info().0;
         if castling != 0 {
             if castling == WK_CASTLE || castling == BK_CASTLE {
                 output.push_str( "O-O" );
@@ -643,7 +628,7 @@ impl State {
                 }
             },
             WHITE_KING => {
-                match mv.castling() {
+                match mv.castling_info().0 {
                     WK_CASTLE => {
                         self.simple_board[ 7 ] = EMPTY;
                         self.simple_board[ 5 ] = WHITE_ROOK;
@@ -692,7 +677,7 @@ impl State {
                 }
             },
             BLACK_KING => {
-                match mv.castling() {
+                match mv.castling_info().0 {
                     BK_CASTLE => {
                         self.simple_board[ 63 ] = EMPTY;
                         self.simple_board[ 61 ] = BLACK_ROOK;
@@ -783,7 +768,7 @@ impl State {
                 }
             },
             WHITE_KING => {
-                match mv.castling() {
+                match mv.castling_info().0 {
                     WK_CASTLE => {
                         self.simple_board[ 7 ] = WHITE_ROOK;
                         self.simple_board[ 5 ] = EMPTY;
@@ -807,7 +792,7 @@ impl State {
                 }
             },
             BLACK_KING => {
-                match mv.castling() {
+                match mv.castling_info().0 {
                     BK_CASTLE => {
                         self.simple_board[ 63 ] = BLACK_ROOK;
                         self.simple_board[ 61 ] = EMPTY;
@@ -1258,7 +1243,7 @@ impl State {
 
     // For pseudo-legal moves
     pub fn is_legal( &self, mv: &Move ) -> bool {
-        let castling_path = mv.castling_path(); // zero if not castling
+        let castling_path = mv.castling_info().1; // zero if not castling
         if castling_path != 0 {
             self.attacked & castling_path == 0 // No checks on the king's path including the starting and ending square
         } else {
@@ -1578,7 +1563,7 @@ impl State {
         let mut to_move = mv.piece & COLOR;
 
         // Castling will have an SEE of 0
-        if mv.castling() != 0 { return 0; }
+        if mv.castling_info().0 != 0 { return 0; }
 
         let from = mv.from;
         let to = mv.to;
@@ -1840,7 +1825,7 @@ impl State {
         }
 
         // Castling
-        match mv.castling() {
+        match mv.castling_info().0 {
             WK_CASTLE => {
                 d_eval_mg += ROOK_PST[ 58 ] - ROOK_PST[ 56 ];
                 d_eval_eg += ROOK_PST[ 58 ] - ROOK_PST[ 56 ];
