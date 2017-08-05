@@ -23,14 +23,26 @@ use search::*;
 use hashtables::*;
 
 fn main() {
+    //testing::perftsuite_bench();
+
     let t1 = precise_time_ns();
 
     let mut state = State::new();
     let mut stats = SearchStats::new();
-    let mut tt = TranspositionTable::new( 24 );
-    let pv = negamax( &mut state, 9, -INF_VALUE, INF_VALUE, &mut stats, &mut tt );
+    let mut tt: HashTable<Eval> = HashTable::new( 24 );
+    //println!( "{}\n", state );
+    let pv = negamax( &mut state, 8, -INF_VALUE, INF_VALUE, &mut stats, &mut tt );
     println!( "Eval: {}\n", pv.eval );
-    println!( "{:?}\n", stats );
+    //println!( "{:?}\n", stats );
+    //println!( "{:?}\n", pv.move_list );
+
+    let t2 = precise_time_ns();
+    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+
+    //simple_game::play();
+
+    //let fen = "1rbq1rk1/p1b1nppp/1p2p3/8/1B1pN3/P2B4/1P3PPP/2RQ1R1K w - - 0 0";
+    //let mut state = State::generate_state_from_fen( fen );
 
     //let mut state = State::new();
     //profile( &mut state, 6 );
@@ -48,8 +60,4 @@ fn main() {
     }
     */
 
-    // simple_game::play();
-
-    let t2 = precise_time_ns();
-    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
 }
