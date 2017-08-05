@@ -109,7 +109,7 @@ pub fn quiescence( state: &mut State, mut alpha: i32, beta: i32, stats: &mut Sea
     }
 }
 
-pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stats: &mut SearchStats, tt: &mut TranspositionTable ) -> Variation {
+pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stats: &mut SearchStats, tt: &mut HashTable<Eval> ) -> Variation {
     let ( legal_moves, status ) = state.node_info();
 
     if status == Status::Ongoing {

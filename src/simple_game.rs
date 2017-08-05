@@ -37,7 +37,7 @@ pub fn play() {
 
     let search_depth: usize = 4;
     let mut state = State::new();
-    let mut tt = TranspositionTable::new( 24 );
+    let mut tt: HashTable<Eval> = HashTable::new( 24 );
 
     loop {
         if state.to_move == opponent_color {

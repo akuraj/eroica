@@ -1450,15 +1450,15 @@ impl State {
             26
         };
 
-        let mut hp = HashPerft::new( num_bits );
+        let mut ht: HashTable<u64> = HashTable::new( num_bits );
 
-        self.hash_perft_rep( depth, divide, &mut hp )
+        self.hash_perft_rep( depth, divide, &mut ht )
     }
 
-    pub fn hash_perft_rep( &mut self, depth: usize, divide: bool, hp: &mut HashPerft ) -> u64 {
+    pub fn hash_perft_rep( &mut self, depth: usize, divide: bool, ht: &mut HashTable<u64> ) -> u64 {
         assert!( depth > 0, "Depth has to be greater than zero!" );
 
-        if let Some( nodes ) = hp.get( self.hash, depth ) {
+        if let Some( nodes ) = ht.get( self.hash, depth ) {
             nodes
         } else {
             let legal_moves = self.legal_moves();
@@ -1472,7 +1472,7 @@ impl State {
 
                 for mv in &legal_moves {
                     self.make( mv );
-                    nodes_child = self.hash_perft_rep( depth - 1, false, hp );
+                    nodes_child = self.hash_perft_rep( depth - 1, false, ht );
                     self.unmake( mv, &irs );
 
                     if divide {
@@ -1483,7 +1483,7 @@ impl State {
                 }
 
                 // Store in hash table
-                hp.set( self.hash, depth, nodes );
+                ht.set( self.hash, depth, nodes );
 
                 nodes
             }
