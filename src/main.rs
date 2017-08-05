@@ -1,4 +1,6 @@
 #![feature(test)]
+#![feature(specialization)]
+
 extern crate rand;
 extern crate time;
 extern crate test;
