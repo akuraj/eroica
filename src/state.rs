@@ -110,7 +110,7 @@ impl Move {
     // Score: Tapered Evaluation using PST + SEE
     #[inline]
     pub fn score( &self ) -> i32 {
-        self.pst_eval.tapered_eval( self.piece & COLOR ) + self.see
+        self.pst_eval.eval( self.piece & COLOR ) + self.see
     }
 }
 
@@ -174,7 +174,7 @@ impl PSTEval {
     }
 
     #[inline]
-    pub fn tapered_eval( &self, to_move: u8 ) -> i32 {
+    pub fn eval( &self, to_move: u8 ) -> i32 {
         // Tapered Eval from side-to-move's POV
         let phase = ( ( cmp::max( EG_NPM_LIMIT, cmp::min( MG_NPM_LIMIT, self.npm ) ) - EG_NPM_LIMIT ) * MG_PHASE ) / ( MG_NPM_LIMIT - EG_NPM_LIMIT );
         let eval = ( phase * self.eval_mg + ( MG_PHASE - phase ) * self.eval_eg ) / MG_PHASE;
@@ -1682,8 +1682,8 @@ impl State {
     }
 
     // Tapered Evaluation using PST
-    pub fn pst_tapered_eval( &self ) -> i32 {
-        self.pst_eval.tapered_eval( self.to_move )
+    pub fn pst_eval( &self ) -> i32 {
+        self.pst_eval.eval( self.to_move )
     }
 
     pub fn incremental_pst_eval( &self, mv: &mut Move ) {

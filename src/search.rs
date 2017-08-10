@@ -1,7 +1,6 @@
 //! Game Tree Search
 
 use state::*;
-use evaluation::*;
 use consts::*;
 use std::cmp;
 use std::collections::VecDeque;
@@ -58,7 +57,7 @@ impl SearchStats {
 
 pub fn profile( state: &mut State, depth: usize ) {
     if depth == 0 {
-        let _ = state.pst_tapered_eval();
+        let _ = state.pst_eval();
     } else {
         let ( legal_moves, _ ) = state.node_info();
         let irs = state.ir_state();
@@ -75,7 +74,7 @@ pub fn quiescence( state: &mut State, mut alpha: i32, beta: i32, stats: &mut Sea
     let ( legal_moves, status ) = state.node_info();
 
     if status == Status::Ongoing {
-        let mut eval = state.pst_tapered_eval();
+        let mut eval = state.pst_eval();
 
         if beta <= eval {
             // Assuming that we are not in Zugzwang, the "Stand Pat" is a lower bound on the eval.
