@@ -6,6 +6,27 @@ use std::cmp;
 use std::collections::VecDeque;
 use hashtables::*;
 
+// Evaluation Type
+#[derive(Copy,Clone,Debug,PartialEq,Eq)]
+pub enum EvalType {
+    Alpha,
+    Exact,
+}
+
+// Evaluation Result
+#[derive(Copy,Clone,Debug,PartialEq,Eq)]
+pub struct Eval {
+    pub eval_type: EvalType,
+    pub value: i32,
+}
+
+impl Default for Eval {
+    fn default() -> Self {
+        Eval { eval_type: EvalType::Alpha,
+               value: -INF_VALUE, }
+    }
+}
+
 pub struct Variation {
     pub eval: i32,
     pub move_list: VecDeque<Move>,
