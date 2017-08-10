@@ -39,7 +39,7 @@ impl Variation {
     }
 
     pub fn max_assign( &mut self, mv: &Move, var: Variation ) {
-        if self.eval < -( var.eval ) {
+        if self.eval < -var.eval {
             self.eval = -var.eval;
             self.move_list = var.move_list;
             self.move_list.push_front( *mv );
