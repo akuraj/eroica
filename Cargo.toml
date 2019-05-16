@@ -6,6 +6,7 @@ authors = [ "Jayakiran Akurathi <Jayakiran.Akurathi@gmail.com>" ]
 [dependencies]
 rand = "*"
 time = "*"
+rand_chacha = "*"
 
 [profile.test]
 opt-level = 3

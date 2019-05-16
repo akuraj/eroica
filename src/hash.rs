@@ -1,6 +1,7 @@
 //! An implementation of Zobrist Hash - provides an interface to return hash by piece/pos
 
-use rand::{ Rng, SeedableRng, ChaChaRng };
+use rand::{ Rng, SeedableRng };
+use rand_chacha::ChaChaRng;
 
 pub struct HashGen {
     pub side_hash: u64, // ON when White to move
@@ -11,8 +12,15 @@ pub struct HashGen {
 
 impl HashGen {
     pub fn new() -> Self {
-        let seed: &[ _ ] = &[ 9, 11, 19, 36 ]; // 9/11/1936 is Tal's birthdate
-        let mut rng: ChaChaRng = SeedableRng::from_seed( seed );
+        // Seed: 9/11/1936 is Tal's birthdate
+        let mut rng: ChaChaRng = SeedableRng::from_seed( [ 9, 11, 19, 36,
+                                                           9, 11, 19, 36,
+                                                           9, 11, 19, 36,
+                                                           9, 11, 19, 36,
+                                                           9, 11, 19, 36,
+                                                           9, 11, 19, 36,
+                                                           9, 11, 19, 36,
+                                                           9, 11, 19, 36 ] );
 
         let mut hg = HashGen { side_hash: 0,
                                piece_hash: [ 0; 768 ],

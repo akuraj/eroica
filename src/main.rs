@@ -4,6 +4,7 @@
 extern crate rand;
 extern crate time;
 extern crate test;
+extern crate rand_chacha;
 
 pub mod consts;
 pub mod state;
