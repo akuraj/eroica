@@ -92,7 +92,7 @@ pub fn magic( pos: usize, piece: u8, stored: bool, verbose: bool ) -> ( u64, Vec
         let mut guess: u64;
         let mut tries = 0;
 
-        'main: loop {
+        loop {
             'guess: loop {
                 guess = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>(); // num_bits: Mean = 8, StdDev = 2.65
                 if magic_hash( guess, mask, 56 ).count_ones() >= 6 { break 'guess; }
