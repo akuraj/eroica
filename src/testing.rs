@@ -2,8 +2,8 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::File;
 use std::str::FromStr;
+use std::time::Instant;
 use state::*;
-use time::*;
 use pgn_parser::*;
 
 #[derive(Debug)]
@@ -112,10 +112,9 @@ pub fn run_check_is_legal_strict_rec( path: &str ) {
 }
 
 pub fn perftsuite_bench() {
-    let t1 = precise_time_ns();
+    let start = Instant::now();
     run_perft( "testing/perftsuite_bench.epd", true );
-    let t2 = precise_time_ns();
-    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+    println!( "Time taken: {} seconds", ( start.elapsed().as_nanos() as f32 ) / 1e9 );
 }
 
 pub fn game_termination_rep() {

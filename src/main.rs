@@ -19,7 +19,7 @@ pub mod evaluation;
 pub mod search;
 pub mod simple_game;
 
-use time::*;
+use std::time::Instant;
 use state::*;
 use consts::*;
 use search::*;
@@ -28,7 +28,7 @@ use hashtables::*;
 fn main() {
     //testing::perftsuite_bench();
 
-    let t1 = precise_time_ns();
+    let start = Instant::now();
 
     let mut state = State::new();
     let mut stats = SearchStats::new();
@@ -39,8 +39,7 @@ fn main() {
     //println!( "{:?}\n", stats );
     //println!( "{:?}\n", pv.move_list );
 
-    let t2 = precise_time_ns();
-    println!( "Time taken: {} seconds", ( ( t2 - t1 ) as f32 ) / 1e9 );
+    println!( "Time taken: {} seconds", ( start.elapsed().as_nanos() as f32 ) / 1e9 );
 
     //simple_game::play();
 
