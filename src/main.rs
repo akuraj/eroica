@@ -61,5 +61,4 @@ fn main() {
         state.unmake( &mv, &irs );
     }
     */
-
 }
