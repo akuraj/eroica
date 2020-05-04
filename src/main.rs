@@ -27,6 +27,7 @@ use hashtables::*;
 
 fn main() {
     //testing::perftsuite_bench();
+    // NOTE: Test Commit!
 
     let start = Instant::now();
 
