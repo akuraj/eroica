@@ -1,6 +1,9 @@
 language: rust
 rust:
   - nightly
+before_install:
+  - rustup toolchain add nightly
+  - rustup update
 script:
   - travis_wait cargo build --verbose
   - travis_wait cargo test --verbose
