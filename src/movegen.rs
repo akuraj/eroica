@@ -1,9 +1,9 @@
 //! MoveGen - defines an interface that provides functions to get the possible attacks/moves of pieces
 //! Stores attacks for non-sliding pieces, uses magics to compute attacks for sliding pieces
 
-use consts::*;
-use utils::*;
-use magics::*;
+use crate::consts::*;
+use crate::utils::*;
+use crate::magics::*;
 
 pub struct MoveGen {
     pub knight_attacks: [ u64; 64 ],

@@ -1,11 +1,11 @@
 //! Simple Game Protocol
 
 use std::io;
-use state::*;
-use search::*;
-use consts::*;
-use pgn_parser::*;
-use hashtables::*;
+use crate::state::*;
+use crate::search::*;
+use crate::consts::*;
+use crate::pgn_parser::*;
+use crate::hashtables::*;
 
 pub fn user_input< 'a >( buffer: &'a mut String, stdin: &'a mut io::Stdin ) -> &'a str {
     buffer.clear();

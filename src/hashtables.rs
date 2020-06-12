@@ -1,6 +1,6 @@
 //! Implement required hash tables here
 
-use consts::*;
+use crate::consts::*;
 use std::fmt::Debug;
 
 // Shorthand to represent the combination of a few traits.

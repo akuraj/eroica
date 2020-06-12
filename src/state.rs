@@ -2,11 +2,11 @@
 
 use std::ops::{ Index, IndexMut };
 use std::fmt;
-use consts::*;
-use utils::*;
-use movegen::*;
-use hash::*;
-use hashtables::*;
+use crate::consts::*;
+use crate::utils::*;
+use crate::movegen::*;
+use crate::hash::*;
+use crate::hashtables::*;
 use std::collections::VecDeque;
 use std::cmp;
 use std::cmp::Ordering;

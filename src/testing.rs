@@ -3,8 +3,8 @@ use std::io::BufReader;
 use std::fs::File;
 use std::str::FromStr;
 use std::time::Instant;
-use state::*;
-use pgn_parser::*;
+use crate::state::*;
+use crate::pgn_parser::*;
 
 #[derive(Debug)]
 pub struct PerftResultItem {

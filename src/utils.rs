@@ -1,6 +1,6 @@
 //! Utils needed for various purposes
 
-use consts::*;
+use crate::consts::*;
 use std::u64;
 use std::cmp;
 

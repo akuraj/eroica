@@ -1,10 +1,10 @@
 //! Game Tree Search
 
-use state::*;
-use consts::*;
+use crate::state::*;
+use crate::consts::*;
 use std::cmp;
 use std::collections::VecDeque;
-use hashtables::*;
+use crate::hashtables::*;
 
 // Evaluation Type
 #[derive(Copy,Clone,Debug,PartialEq,Eq)]

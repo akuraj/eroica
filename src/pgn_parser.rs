@@ -3,9 +3,9 @@
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::File;
-use state::*;
-use consts::*;
-use utils::*;
+use crate::state::*;
+use crate::consts::*;
+use crate::utils::*;
 
 // Game Start Delineator
 pub const PGN_DELINEATOR: &'static str = "[Event";

@@ -1,7 +1,7 @@
 //! Magics - for fast move generation for Bishops and Rooks
 
-use consts::*;
-use utils::*;
+use crate::consts::*;
+use crate::utils::*;
 use rand::{ Rng, thread_rng };
 
 // shift = 64 - hash_num_bits, where hash_num_bits = number of bits set in the mask
