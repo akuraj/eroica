@@ -1,5 +1,4 @@
 #![feature(specialization)]
-#[cfg(test)]
 
 extern crate rand;
 extern crate time;
