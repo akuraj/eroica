@@ -1,4 +1,4 @@
-# eroica [![Build Status](https://travis-ci.org/akuraj/eroica.svg?branch=master)](https://travis-ci.org/akuraj/eroica)
+# eroica
 
 Chess Engine written in Rust. My goal is to write a strong Chess Engine as a learning experience. Yes - it can play decent Chess already, but can't play a whole game yet.
 

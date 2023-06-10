@@ -1,6 +1,0 @@
-language: rust
-rust:
-  - nightly
-script:
-  - travis_wait cargo build --release
-  - travis_wait cargo test --release -- --nocapture
