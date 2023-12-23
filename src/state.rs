@@ -98,7 +98,7 @@ impl Move {
     }
 
     pub fn null_move( piece: u8, pos: usize ) -> Self {
-        Move { piece: piece,
+        Move { piece,
                from: pos,
                to: ERR_POS,
                capture: EMPTY,
@@ -162,6 +162,12 @@ pub struct PSTEval {
     pub npm: i32,
     pub eval_mg: i32,
     pub eval_eg: i32,
+}
+
+impl Default for PSTEval {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PSTEval {
@@ -320,7 +326,7 @@ impl State {
         let num_fields = fen.split_whitespace().count();
         assert!( num_fields == 5 || num_fields == 6, "FEN must specify exactly 5 or 6 fields ( if fullmove_count is also included ):\n{}", fen );
 
-        let mut iter = fen.split_whitespace().enumerate();
+        let iter = fen.split_whitespace().enumerate();
         let mut state = State { simple_board: [ EMPTY; 64 ],
                                 bit_board: BitBoard( [ 0; 14 ] ),
                                 to_move: 0,
@@ -341,19 +347,19 @@ impl State {
                                 history: VecDeque::new(),
                                 pst_eval: PSTEval::new(), };
 
-        while let Some( ( section_number, section ) ) = iter.next() {
+        for ( section_number, section ) in iter {
             match section_number {
                 0 => {
                     // Populate simple_board
                     assert!( section.rsplit( '/' ).count() == 8, "Position should contain 8 rows:\n{}", section );
-                    let mut row_iter = section.rsplit( '/' ).enumerate();
+                    let row_iter = section.rsplit( '/' ).enumerate();
                     let mut position_offset: usize = 0;
 
-                    while let Some( ( row_number, row ) ) = row_iter.next() {
+                    for ( row_number, row ) in row_iter {
                         assert!( position_offset == 8 * row_number, "Invalid position_offset: {}, at row_number: {}", position_offset, row_number );
-                        let mut char_iter = row.chars();
+                        let char_iter = row.chars();
 
-                        while let Some( c ) = char_iter.next() {
+                        for c in char_iter {
                             if let Some( empty_space ) = c.to_digit( 10 ) {
                                 position_offset += empty_space as usize;
                             } else {
@@ -379,8 +385,8 @@ impl State {
                     match section {
                         "-" => {},
                          _  => {
-                             let mut char_iter = section.chars();
-                             while let Some( c ) = char_iter.next() {
+                             let char_iter = section.chars();
+                             for c in char_iter {
                                  state.castling |= match c {
                                      'K' => WK_CASTLE,
                                      'Q' => WQ_CASTLE,
@@ -1246,19 +1252,15 @@ impl State {
         let castling_path = mv.castling_info().1; // zero if not castling
         if castling_path != 0 {
             self.attacked & castling_path == 0 // No checks on the king's path including the starting and ending square
+        } else if mv.piece == ( self.to_move | KING ) {
+            self.attacked & ( 1 << mv.to ) == 0 // The King can't move into check
+        } else if self.num_checks > 1 {
+            false // Double check, only the King can move
+        } else if mv.piece == ( self.to_move | PAWN ) && self.ep_flag() && ( self.check_blocker & self.ep_target_bb() != 0 ) {
+            // Enemy pawn checking our king can be captured en passant by my pawns
+            ( ( self.check_blocker | self.ep_bb() ) & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
         } else {
-            if mv.piece == ( self.to_move | KING ) {
-                self.attacked & ( 1 << mv.to ) == 0 // The King can't move into check
-            } else if self.num_checks > 1 {
-                false // Double check, only the King can move
-            } else {
-                if mv.piece == ( self.to_move | PAWN ) && self.ep_flag() && ( self.check_blocker & self.ep_target_bb() != 0 ) {
-                    // Enemy pawn checking our king can be captured en passant by my pawns
-                    ( ( self.check_blocker | self.ep_bb() ) & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
-                } else {
-                    ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
-                }
-            }
+            ( self.check_blocker & self.a_pins[ mv.from ] ) & ( 1 << mv.to ) != 0 // The move shouldn't break out of an a_pin and should block check, if any
         }
     }
 
@@ -1314,7 +1316,7 @@ impl State {
         legal_moves.sort();
 
         // compute status and return
-        if legal_moves.len() == 0 {
+        if legal_moves.is_empty() {
             if self.num_checks > 0 {
                 ( legal_moves, Status::Checkmate )
             } else {
@@ -1323,7 +1325,7 @@ impl State {
         } else if self.halfmove_clock > 99 {
             ( legal_moves, Status::FiftyMoveDraw )
         } else {
-            let rev_history = cmp::min( self.halfmove_clock as usize, self.history.len() ); // Available reversible history
+            let rev_history = cmp::min( self.halfmove_clock, self.history.len() ); // Available reversible history
             if rev_history > 7 && self.num_repetitions( rev_history ) > 1 {
                 ( legal_moves, Status::RepetitionDraw )
             } else {

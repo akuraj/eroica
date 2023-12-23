@@ -18,7 +18,7 @@ pub fn user_input< 'a >( buffer: &'a mut String, stdin: &'a mut io::Stdin ) -> &
 pub fn ask( buffer: &mut String, stdin: &mut io::Stdin, question: &str, options: &[ String ] ) -> String {
     println!( "{}", question );
     let input = user_input( buffer, stdin ).to_string();
-    println!( "" );
+    println!(  );
 
     if options.contains( &input ) {
         input
@@ -31,7 +31,7 @@ pub fn play() {
     let stdin = &mut io::stdin();
     let buffer = &mut String::new();
 
-    if ask( buffer, stdin, "Wanna play a game of Chess? (y/n)", &[ "y".to_string(), "n".to_string() ] ) == "n" { return (); }
+    if ask( buffer, stdin, "Wanna play a game of Chess? (y/n)", &[ "y".to_string(), "n".to_string() ] ) == "n" { return ; }
     let color_string = ask( buffer, stdin, "You wanna play White or Black? (w/b)", &[ "w".to_string(), "b".to_string() ] );
     let opponent_color = if color_string == "w" { WHITE } else { BLACK };
 
@@ -57,7 +57,7 @@ pub fn play() {
         } else {
             let mut stats = SearchStats::new();
             let pv = negamax( &mut state, search_depth, -MATE_VALUE, MATE_VALUE, &mut stats, &mut tt );
-            let mv = pv.move_list.get( 0 ).unwrap();
+            let mv = pv.move_list.front().unwrap();
             state.make( mv );
             println!( "I just played: {}", mv );
             println!( "My evaluation is {}, at a depth of {}.\n", pv.eval, search_depth );

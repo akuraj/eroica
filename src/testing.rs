@@ -39,8 +39,8 @@ pub fn parse_peft_test_case( test: &str ) -> PerftResult {
             }
         }
 
-        assert!( values.len() > 0, "No perft info to test for: {}", fen );
-        PerftResult { fen: String::from( fen ), values: values }
+        assert!( !values.is_empty(), "No perft info to test for: {}", fen );
+        PerftResult { fen: String::from( fen ), values }
     } else {
         panic!( "Test case is empty!" );
     }

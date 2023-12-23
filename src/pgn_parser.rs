@@ -8,13 +8,13 @@ use crate::consts::*;
 use crate::utils::*;
 
 // Game Start Delineator
-pub const PGN_DELINEATOR: &'static str = "[Event";
+pub const PGN_DELINEATOR: &str = "[Event";
 
 // Game Result Strings
-pub const WHITE_WON: &'static str = "\"1-0\"";
-pub const BLACK_WON: &'static str = "\"0-1\"";
-pub const GAME_DRAWN: &'static str = "\"1/2-1/2\"";
-pub const GAME_ONGOING: &'static str = "\"*\"";
+pub const WHITE_WON: &str = "\"1-0\"";
+pub const BLACK_WON: &str = "\"0-1\"";
+pub const GAME_DRAWN: &str = "\"1/2-1/2\"";
+pub const GAME_ONGOING: &str = "\"*\"";
 
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum GameResult {
@@ -85,14 +85,14 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                 return Err( format!( "{} doesn't end with {}", mv_str_mut, checkmate_str ) );
             }
 
-            if is_check && is_checkmate { return Err( format!( "Input move has both '+' and '#'" ) ); }
+            if is_check && is_checkmate { return Err( "Input move has both '+' and '#'".to_string() ); }
 
             // Remove check and checkmate
             mv_str_mut = mv_str_mut.chars().filter( |&x| x != '+' && x != '#' ).collect();
 
-            let piece_char = match mv_str_mut.chars().nth( 0 ) {
+            let piece_char = match mv_str_mut.chars().next() {
                 Some( piece_char_actual ) => piece_char_actual,
-                None => return Err( format!( "piece_char: mv_str_mut[ 0 ] out of bounds!" ) ),
+                None => return Err( "piece_char: mv_str_mut[ 0 ] out of bounds!".to_string() ),
             };
 
             let from: usize;
@@ -107,7 +107,7 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                 'B' => BISHOP,
                 'N' => KNIGHT,
                 _ => {
-                    if 'a' <= piece_char && piece_char <= 'h' {
+                    if ('a'..='h').contains(&piece_char) {
                         PAWN
                     } else {
                         return Err( format!( "Invalid piece_char: {}", piece_char ) )
@@ -126,12 +126,12 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
 
                     let promoted_to = match temp_str.split( '=' ).nth( 1 ) {
                         Some( promoted_to_actual ) => promoted_to_actual,
-                        None => return Err( format!( "promoted_to: temp_str[ 1 ] out of bounds!" ) ),
+                        None => return Err( "promoted_to: temp_str[ 1 ] out of bounds!".to_string() ),
                     };
 
-                    mv_str_mut = ( match temp_str.split( '=' ).nth( 0 ) {
+                    mv_str_mut = ( match temp_str.split( '=' ).next() {
                         Some( mv_str_mut_actual ) =>  mv_str_mut_actual,
-                        None => return Err( format!( "temp_str[ 0 ] out of bounds!" ) ),
+                        None => return Err( "temp_str[ 0 ] out of bounds!".to_string() ),
                     } ).to_string();
 
                     promotion = state.to_move | match promoted_to {
@@ -154,12 +154,12 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
 
                 let capture_square = match temp_str.split( 'x' ).nth( 1 ) {
                     Some( capture_square_actual ) => capture_square_actual,
-                    None => return Err( format!( "capture_square: temp_str[ 1 ] out of bounds!" ) ),
+                    None => return Err( "capture_square: temp_str[ 1 ] out of bounds!".to_string() ),
                 };
 
-                mv_str_mut = ( match temp_str.split( 'x' ).nth( 0 ) {
+                mv_str_mut = ( match temp_str.split( 'x' ).next() {
                     Some( mv_str_mut_actual ) =>  mv_str_mut_actual,
-                    None => return Err( format!( "temp_str[ 0 ] out of bounds!" ) ),
+                    None => return Err( "temp_str[ 0 ] out of bounds!".to_string() ),
                 } ).to_string();
 
                 to = algebraic_to_offset( capture_square );
@@ -180,7 +180,7 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                 }
             }
 
-            let num_poss = possibilities.iter().count();
+            let num_poss = possibilities.len();
 
             if num_poss > 1 {
                 let mut poss_filtered: Vec<Move> = Vec::new();
@@ -190,12 +190,12 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                     if size != 1 {
                         return Err( format!( "Disambiguation is problematic 1: {}, {}", mv_str, mv_str_mut ) );
                     } else {
-                        let file = match mv_str_mut.chars().nth( 0 ) {
+                        let file = match mv_str_mut.chars().next() {
                             Some( file_actual ) => file_actual,
-                            None => return Err( format!( "file: mv_str_mut[ 0 ] out of bounds!" ) ),
+                            None => return Err( "file: mv_str_mut[ 0 ] out of bounds!".to_string() ),
                         };
 
-                        if 'a' <= file && file <= 'h' {
+                        if ('a'..='h').contains(&file) {
                             let file_num = file as usize - 'a' as usize;
                             for x in possibilities.iter() {
                                 if x.from % 8 == file_num {
@@ -219,19 +219,19 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                             }
                         }
                     } else if size == 1 {
-                        let disamb = match mv_str_mut.chars().nth( 0 ) {
+                        let disamb = match mv_str_mut.chars().next() {
                             Some( file_actual ) => file_actual,
-                            None => return Err( format!( "disamb: mv_str_mut[ 0 ] out of bounds!" ) ),
+                            None => return Err( "disamb: mv_str_mut[ 0 ] out of bounds!".to_string() ),
                         };
 
-                        if '1' <= disamb && disamb <= '8' {
+                        if ('1'..='8').contains(&disamb) {
                             let rank_num = disamb as usize - '1' as usize;
                             for x in possibilities.iter() {
                                 if x.from / 8 == rank_num {
                                     poss_filtered.push( *x );
                                 }
                             }
-                        } else if 'a' <= disamb && disamb <= 'h' {
+                        } else if ('a'..='h').contains(&disamb) {
                             let file_num = disamb as usize - 'a' as usize;
                             for x in possibilities.iter() {
                                 if x.from % 8 == file_num {
@@ -246,17 +246,17 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                     }
                 }
 
-                let final_size = poss_filtered.iter().count();
+                let final_size = poss_filtered.len();
                 if final_size == 1 {
                     match poss_filtered.iter_mut().nth( 0 ) {
                         Some( poss_filtered_actual ) => {
                             state.evaluate_move( poss_filtered_actual );
                             Ok( *poss_filtered_actual )
                         },
-                        None => return Err( format!( "poss_filtered: poss_filtered[ 0 ] out of bounds!" ) ),
+                        None => Err( "poss_filtered: poss_filtered[ 0 ] out of bounds!".to_string() ),
                     }
                 } else {
-                    return Err( format!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut ) )
+                    Err( format!( "Disambiguation is problematic 5: {}, {}", mv_str, mv_str_mut ) )
                 }
             } else if num_poss == 1 {
                 match possibilities.iter_mut().nth( 0 ) {
@@ -264,7 +264,7 @@ pub fn parse_move( mv_str: &str, state: &State ) -> Result< Move, String > {
                         state.evaluate_move( possibilities_actual );
                         Ok( *possibilities_actual )
                     },
-                    None => return Err( format!( "possibilities: possibilities[ 0 ] out of bounds!" ) ),
+                    None => return Err( "possibilities: possibilities[ 0 ] out of bounds!".to_string() ),
                 }
             } else {
                 return Err( format!( "Illegal move: {}", mv_str ) )
@@ -283,18 +283,18 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
     // get file as String
     let mut file_string = String::new();
     for line in file.lines() {
-        file_string.push_str( "\n" );
+        file_string.push('\n');
         file_string.push_str( &line.unwrap() );
     }
 
     let mut games: Vec<Game> = Vec::new();
 
     // Get a game iterator
-    let mut game_iter = file_string.split( PGN_DELINEATOR ).skip( 1 );
-    while let Some( pgn ) = game_iter.next() {
+    let game_iter = file_string.split( PGN_DELINEATOR ).skip( 1 );
+    for pgn in game_iter {
         let pgn = pgn.trim();
-        let move_text = pgn.split( "]" ).last().unwrap();
-        let mut curr_iter = pgn.split( "]" ).skip( 1 );
+        let move_text = pgn.split( ']' ).last().unwrap();
+        let mut curr_iter = pgn.split( ']' ).skip( 1 );
 
         // Seven Tag Roster - we already ignored 'Event'
         // NOTE: We are going to ignore the contents of most of the tags
@@ -317,7 +317,7 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
         assert!( result.starts_with( "[Result" ) );
 
         let result_val = result.split_whitespace().last().unwrap();
-        let result_val_nq = result_val.split( "\"" ).nth( 1 ).unwrap();
+        let result_val_nq = result_val.split( '\"' ).nth( 1 ).unwrap();
         assert_eq!( move_text.split_whitespace().last().unwrap(), result_val_nq );
         let result_enum = match result_val {
             WHITE_WON => GameResult::WhiteWon,
@@ -332,18 +332,18 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
         let mut termination: String = "".to_string();
         let mut final_fen: String = "".to_string();
 
-        while let Some( item ) = curr_iter.next() {
+        for item in curr_iter {
             let item = item.trim();
             if item.starts_with( "[SetUp" ) {
-                if item.split( "\"" ).nth( 1 ).unwrap() == "1" {
+                if item.split( '\"' ).nth( 1 ).unwrap() == "1" {
                     set_up = true;
                 }
             } else if item.starts_with( "[FEN" ) {
-                fen = item.split( "\"" ).nth( 1 ).unwrap().to_string();
+                fen = item.split( '\"' ).nth( 1 ).unwrap().to_string();
             } else if item.starts_with( "[FinalFEN" ) {
-                final_fen = item.split( "\"" ).nth( 1 ).unwrap().to_string();
+                final_fen = item.split( '\"' ).nth( 1 ).unwrap().to_string();
             } else if item.starts_with( "[Termination" ) {
-                termination = item.split( "\"" ).nth( 1 ).unwrap().to_string();
+                termination = item.split( '\"' ).nth( 1 ).unwrap().to_string();
             }
         }
 
@@ -356,7 +356,7 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
         // Nested stuff is unsupported!
         // Too lazy to write a proper parser....
         let all_special: String = "\"{}()%".to_string();
-        let move_text_nr = move_text.split( result_val_nq ).nth( 0 ).unwrap().trim();
+        let move_text_nr = move_text.split( result_val_nq ).next().unwrap().trim();
         let mut move_text_pure = String::new();
         let mut open_comment: bool = false;
         let mut comment_type: char = '"';
@@ -427,12 +427,12 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
                 } else if mv_str.ends_with( '#' ) {
                     assert!( state.num_checks > 0 );
                     let ( legal_moves, _ ) = state.node_info();
-                    assert_eq!( legal_moves.iter().count(), 0 );
+                    assert_eq!( legal_moves.len(), 0 );
                 }
             }
         }
 
-        if final_fen != "" {
+        if !final_fen.is_empty() {
             assert_eq!( final_fen, state.fen( true ) );
         }
 
@@ -451,7 +451,7 @@ pub fn parse_pgn( path: &str ) -> Vec<Game> {
         }
 
         games.push( Game { init_pos: fen,
-                           move_list: move_list,
+                           move_list,
                            result: result_enum,
                            end_status: status } );
     }

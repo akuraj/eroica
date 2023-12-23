@@ -82,7 +82,7 @@ pub fn magic( pos: usize, piece: u8, stored: bool, verbose: bool ) -> ( u64, Vec
     if stored {
         // Check and return stored magic
         if let Some( hashed_attacks ) = hashed_attacks( stored_magic, &occupancies, &attacks, shift ) {
-            return ( stored_magic, hashed_attacks );
+            ( stored_magic, hashed_attacks )
         } else {
             panic!( "Stored magic is not magical!\nPiece: {}, Pos: {}", if piece == ROOK { "Rook" } else { "Bishop" }, pos );
         }

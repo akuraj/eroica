@@ -10,6 +10,12 @@ pub struct HashGen {
     pub ep_hash: [ u64; 8 ],  // One for each file - only used if ep_possible
 }
 
+impl Default for HashGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HashGen {
     pub fn new() -> Self {
         // Seed: 9/11/1936 is Tal's birthdate

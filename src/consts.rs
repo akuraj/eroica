@@ -1,7 +1,7 @@
 //! Defines required constants that will be used in this project
 
 // Start FEN
-pub const START_FEN: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+pub const START_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 // Color types
 pub const COLOR: u8 = 1;

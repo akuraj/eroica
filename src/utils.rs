@@ -82,18 +82,18 @@ pub fn piece_to_char( piece: u8 ) -> char {
 
 pub fn algebraic_to_offset( square: &str ) -> usize {
     assert!( square.chars().count() == 2, "Invalid algebraic address \"{}\"", square );
-    let mut char_iter = square.chars().enumerate();
+    let char_iter = square.chars().enumerate();
     let mut offset: usize = 0;
 
-    while let Some( ( i, c ) ) = char_iter.next() {
+    for ( i, c ) in char_iter {
         match i {
             0 => {
-                assert!( 'a' <= c && c <= 'h', "Invalid file: {}", c );
+                assert!( ('a'..='h').contains(&c), "Invalid file: {}", c );
                 offset += c as usize - 'a' as usize;
             },
             1 => {
                 if let Some( rank_number ) = c.to_digit( 10 ) {
-                    assert!( 1 <= rank_number && rank_number <= 8, "Invalid rank: {}", c );
+                    assert!( (1..=8).contains(&rank_number), "Invalid rank: {}", c );
                     offset += ( rank_number as usize - 1 ) * 8;
                 } else {
                     panic!( "Invalid rank: {}", c );
@@ -351,20 +351,18 @@ pub fn pawn_attack( pos: usize, color: u8, occupancy: u64 ) -> u64 {
 
     if ( forward_1 & occupancy ) != 0 {
         attack
-    } else {
-        if ( j == 1 && color == WHITE ) || ( j == 6 && color == BLACK )
-        {
-            // Pawn hasn't moved yet
-            let forward_2: u64 = match color {
-                WHITE => 1 << ( pos + 16 ),
-                BLACK => 1 << ( pos - 16 ),
-                _ => panic!( "Invalid color!" ),
-            };
+    } else if ( j == 1 && color == WHITE ) || ( j == 6 && color == BLACK )
+    {
+        // Pawn hasn't moved yet
+        let forward_2: u64 = match color {
+            WHITE => 1 << ( pos + 16 ),
+            BLACK => 1 << ( pos - 16 ),
+            _ => panic!( "Invalid color!" ),
+        };
 
-            attack | forward_1 | ( forward_2 & !occupancy )
-        } else {
-            attack | forward_1
-        }
+        attack | forward_1 | ( forward_2 & !occupancy )
+    } else {
+        attack | forward_1
     }
 }
 
@@ -404,7 +402,7 @@ pub fn line( pos1: usize, pos2: usize ) -> u64 {
     let ( i2, j2 ) = file_rank( pos2 );
 
     if i1 == i2 {
-        return A_FILE << i1;
+        A_FILE << i1
     } else if j1 == j2 {
         return FIRST_RANK << ( j1 * 8 );
     } else if i1 + j2 == i2 + j1 {

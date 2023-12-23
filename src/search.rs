@@ -34,7 +34,7 @@ pub struct Variation {
 
 impl Variation {
     pub fn terminal( eval: i32 ) -> Self {
-        Variation { eval: eval,
+        Variation { eval,
                     move_list: VecDeque::new(), }
     }
 
@@ -58,6 +58,12 @@ pub struct SearchStats {
     pub beta_cutoff_qs: u64,
     pub hash_hit: u64,
     pub hash_cutoff: u64,
+}
+
+impl Default for SearchStats {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SearchStats {
@@ -164,7 +170,7 @@ pub fn negamax( state: &mut State, depth: usize, mut alpha: i32, beta: i32, stat
                 }
             }
 
-            tt.set( state.hash, depth, Eval { eval_type: eval_type, value: var.eval } );
+            tt.set( state.hash, depth, Eval { eval_type, value: var.eval } );
 
             var
         }
