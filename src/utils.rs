@@ -404,7 +404,7 @@ pub fn line( pos1: usize, pos2: usize ) -> u64 {
     if i1 == i2 {
         A_FILE << i1
     } else if j1 == j2 {
-        return FIRST_RANK << ( j1 * 8 );
+        FIRST_RANK << ( j1 * 8 )
     } else if i1 + j2 == i2 + j1 {
         if i1 > j1 {
             A1_H8 >> ( 8 * ( i1 - j1 ) )
