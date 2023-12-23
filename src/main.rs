@@ -1,27 +1,27 @@
 #![feature(min_specialization)]
 
 extern crate rand;
-extern crate time;
 extern crate rand_chacha;
+extern crate time;
 
 pub mod consts;
-pub mod state;
-pub mod utils;
-pub mod magics;
-pub mod movegen;
-pub mod testing;
+pub mod evaluation;
 pub mod hash;
 pub mod hashtables;
+pub mod magics;
+pub mod movegen;
 pub mod pgn_parser;
-pub mod evaluation;
 pub mod search;
 pub mod simple_game;
+pub mod state;
+pub mod testing;
+pub mod utils;
 
-use std::time::Instant;
-use state::*;
 use consts::*;
-use search::*;
 use hashtables::*;
+use search::*;
+use state::*;
+use std::time::Instant;
 
 fn main() {
     //testing::perftsuite_bench();
@@ -31,14 +31,17 @@ fn main() {
 
     let mut state = State::new();
     let mut stats = SearchStats::new();
-    let mut tt: HashTable<Eval> = HashTable::new( 24 );
+    let mut tt: HashTable<Eval> = HashTable::new(24);
     //println!( "{}\n", state );
-    let pv = negamax( &mut state, 8, -INF_VALUE, INF_VALUE, &mut stats, &mut tt );
-    println!( "Eval: {}\n", pv.eval );
+    let pv = negamax(&mut state, 8, -INF_VALUE, INF_VALUE, &mut stats, &mut tt);
+    println!("Eval: {}\n", pv.eval);
     //println!( "{:?}\n", stats );
     //println!( "{:?}\n", pv.move_list );
 
-    println!( "Time taken: {} seconds", ( start.elapsed().as_nanos() as f32 ) / 1e9 );
+    println!(
+        "Time taken: {} seconds",
+        (start.elapsed().as_nanos() as f32) / 1e9
+    );
 
     //simple_game::play();
 
