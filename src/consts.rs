@@ -10,7 +10,7 @@ pub const BLACK: u8 = COLOR;
 
 pub const COLOR_MASK: u8 = !COLOR;
 
-// Piece types ( including EMPTY and ALL )
+// Piece types (including EMPTY and ALL)
 pub const EMPTY: u8 = !0;
 pub const PAWN: u8 = 0;
 pub const KNIGHT: u8 = 1 << 1;
@@ -139,7 +139,8 @@ pub const QUEEN_VALUE_EG: i32 = 1040;
 
 // Game Phase Non Pawn Material (NPM) Limits
 // MG values of the pieces are used to compute NPM
-// Don't extrapolate outisde the NPM Limits. FIXME: Revisit this later.
+// Don't extrapolate outisde the NPM Limits.
+// FIXME: Revisit the above extrapolation logic.
 // Use a Multiplier to preserve resolution -> MG_PHASE
 pub const MG_NPM_LIMIT: i32 = 6130;
 pub const EG_NPM_LIMIT: i32 = 1570;
