@@ -2,7 +2,7 @@
 
 use crate::consts::*;
 use crate::utils::*;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 
 // shift = 64 - hash_num_bits, where hash_num_bits = number of bits set in the mask
 pub const ROOK_SHIFTS: [u8; 64] = [
@@ -217,13 +217,13 @@ pub fn magic(pos: usize, piece: u8, stored: bool, verbose: bool) -> (u64, Vec<u6
         }
     } else {
         // Compute a magic afresh - trial and error
-        let mut rng = thread_rng();
+        let mut rngv = rng();
         let mut guess: u64;
         let mut tries = 0;
 
         loop {
             'guess: loop {
-                guess = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>(); // num_bits: Mean = 8, StdDev = 2.65
+                guess = rngv.random::<u64>() & rngv.random::<u64>() & rngv.random::<u64>(); // num_bits: Mean = 8, StdDev = 2.65
                 if magic_hash(guess, mask, 56).count_ones() >= 6 {
                     break 'guess;
                 }

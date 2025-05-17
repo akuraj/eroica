@@ -32,21 +32,21 @@ impl HashGen {
         };
 
         // Side
-        hg.side_hash = rng.gen::<u64>();
+        hg.side_hash = rng.random::<u64>();
 
         // Pieces
         for v in hg.piece_hash.iter_mut() {
-            *v = rng.gen::<u64>();
+            *v = rng.random::<u64>();
         }
 
         // Castling
         for v in hg.castling_hash.iter_mut() {
-            *v = rng.gen::<u64>();
+            *v = rng.random::<u64>();
         }
 
         // en_passant
         for v in hg.ep_hash.iter_mut() {
-            *v = rng.gen::<u64>();
+            *v = rng.random::<u64>();
         }
 
         hg
