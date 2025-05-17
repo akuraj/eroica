@@ -19,7 +19,7 @@ impl Default for HashGen {
 impl HashGen {
     pub fn new() -> Self {
         // Seed: 9/11/1936 is Tal's birthdate
-        let mut rng: ChaChaRng = SeedableRng::from_seed([
+        let mut rngv: ChaChaRng = SeedableRng::from_seed([
             9, 11, 19, 36, 9, 11, 19, 36, 9, 11, 19, 36, 9, 11, 19, 36, 9, 11, 19, 36, 9, 11, 19,
             36, 9, 11, 19, 36, 9, 11, 19, 36,
         ]);
@@ -32,21 +32,21 @@ impl HashGen {
         };
 
         // Side
-        hg.side_hash = rng.random::<u64>();
+        hg.side_hash = rngv.random::<u64>();
 
         // Pieces
         for v in hg.piece_hash.iter_mut() {
-            *v = rng.random::<u64>();
+            *v = rngv.random::<u64>();
         }
 
         // Castling
         for v in hg.castling_hash.iter_mut() {
-            *v = rng.random::<u64>();
+            *v = rngv.random::<u64>();
         }
 
         // en_passant
         for v in hg.ep_hash.iter_mut() {
-            *v = rng.random::<u64>();
+            *v = rngv.random::<u64>();
         }
 
         hg
